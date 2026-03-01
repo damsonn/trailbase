@@ -19,16 +19,19 @@ Existing tools like RideWithGPS and Gaia GPS lock core features behind paid tier
 - **Routing modes** — bike, hike, car
 - **Elevation profiles** — view elevation data for any route
 - **GPX import/export** — upload and download routes as `.gpx` files
-- **Map layers** — street, satellite, and terrain views via Mapbox
+- **Map layers** — street, satellite, and terrain views via MapLibre GL JS
 - **Responsive** — works on desktop and mobile browsers
 
 ## Tech Stack
 
-- **Backend:** Kotlin + Ktor
-- **Frontend:** TBD
-- **Database:** PostgreSQL
-- **Maps:** Mapbox GL JS
-- **Infrastructure:** Docker
+- **Server:** TypeScript, Hono, Drizzle ORM
+- **Web App:** React + TypeScript (Vite)
+- **Auth:** Better-Auth (session-based, Drizzle adapter)
+- **Database:** PostgreSQL + PostGIS
+- **Maps:** MapLibre GL JS (react-map-gl)
+- **Routing:** Valhalla (self-hosted)
+- **Shared:** Zod schemas, GPX parser, geo utilities
+- **Infrastructure:** Docker (self-hostable)
 
 ## Getting Started
 
@@ -37,9 +40,10 @@ Existing tools like RideWithGPS and Gaia GPS lock core features behind paid tier
 ## Project Structure
 
 ```
-server/   # Server-side logic (Kotlin/Ktor)
-app/      # Web application
-shared/   # Shared API contracts and types
+server/   # Hono API server (TypeScript)
+app/      # React web app (Vite)
+mobile/   # React Native app (future)
+shared/   # Shared Zod schemas, types, GPX/geo utilities
 docs/     # Documentation (PRD, architecture)
 ```
 
@@ -47,13 +51,13 @@ docs/     # Documentation (PRD, architecture)
 
 | Phase | Focus |
 |-------|-------|
-| v0.1 | Auth, route CRUD, route builder, GPX import/export, Mapbox base layers |
+| v0.1 | Auth, route CRUD, route builder, GPX import/export, MapLibre base layers |
 | v0.2 | Public route sharing, points of interest |
 | v0.3 | Extensible map layer system, community modules |
 | v0.4 | GPS activity recording and stats |
 | v1.0 | Native iOS/Android app with offline maps and navigation |
 
-See [docs/PRD.md](docs/PRD.md) for the full product requirements document.
+See [docs/PRD.md](docs/PRD.md) for product requirements and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system design.
 
 ## Contributing
 
