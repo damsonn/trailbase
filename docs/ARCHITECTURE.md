@@ -223,14 +223,14 @@ Users and instance admins can register additional layers:
 
 Layer definitions are stored as JSON in the database and can be shared across instances via export/import.
 
-### 5.4 MapLibre as Default Renderer
+### 5.4 Map Renderer
 
-While Mapbox GL JS is used for the MVP, the architecture targets **MapLibre GL JS** as the long-term default renderer:
+**MapLibre GL JS** is the map renderer:
 
-- MapLibre is the open-source fork of Mapbox GL JS (BSD license)
-- Eliminates Mapbox token dependency for self-hosted instances
+- Open-source (BSD license) — no proprietary token dependency
 - Full compatibility with Mapbox Style Spec
-- Same API surface — migration is a dependency swap, not a rewrite
+- Self-hosters can run entirely without a Mapbox account using OSM tiles
+- Broad ecosystem: react-map-gl supports MapLibre as a backend
 
 ---
 
@@ -278,7 +278,7 @@ interface RouteResult {
 | **GraphHopper** | Apache 2.0 | Self-hosted or API | bike, hike, car | Good hike routing |
 | **Mapbox Directions** | Proprietary | API | bike, car | Convenient for MVP, not self-hostable |
 
-**Recommendation:** Use **Valhalla** as the primary engine (all activity types, MIT license, turn-by-turn support). Fall back to Mapbox Directions API for the MVP to accelerate development, then migrate to self-hosted Valhalla.
+**Decision:** Use **Valhalla** as the routing engine from day one. It covers all activity types (bike, hike, car), is MIT-licensed, fully self-hostable, and supports turn-by-turn instructions for future navigation features. No Mapbox Directions API dependency.
 
 ---
 
@@ -577,7 +577,7 @@ services:
     environment:
       DATABASE_URL: postgres://...
       MAP_PROVIDER: mapbox        # or 'osm', 'custom'
-      ROUTING_ENGINE: mapbox      # or 'valhalla', 'osrm'
+      ROUTING_ENGINE: valhalla    # or 'osrm', 'graphhopper', 'mapbox'
 
   app:
     build: ./app
@@ -590,11 +590,9 @@ services:
       POSTGRES_DB: trailbase
       POSTGRES_USER: trailbase
 
-  # Optional: self-hosted routing
   valhalla:
     image: ghcr.io/gis-ops/docker-valhalla
     volumes: [valhalla-tiles:/custom_files]
-    profiles: ["routing"]
 
   # Optional: self-hosted elevation
   open-elevation:
@@ -612,8 +610,8 @@ MAP_PROVIDER=mapbox              # mapbox | osm | custom
 MAPBOX_ACCESS_TOKEN=pk.xxx       # only if MAP_PROVIDER=mapbox
 
 # Routing
-ROUTING_ENGINE=mapbox            # mapbox | valhalla | osrm | graphhopper
-VALHALLA_URL=http://valhalla:8002  # only if ROUTING_ENGINE=valhalla
+ROUTING_ENGINE=valhalla          # valhalla | osrm | graphhopper | mapbox
+VALHALLA_URL=http://valhalla:8002
 
 # Elevation
 ELEVATION_PROVIDER=mapbox        # mapbox | open-elevation
@@ -654,8 +652,8 @@ DATABASE_URL=postgres://trailbase:password@db:5432/trailbase
 
 ## 16. Open Questions
 
-- [ ] **Routing engine for MVP** — Start with Mapbox Directions API for speed, or go straight to self-hosted Valhalla?
-- [ ] **MapLibre migration timing** — Switch from Mapbox GL to MapLibre before or after MVP?
+- [x] **Routing engine** — Valhalla from day one. Self-hosted, all profiles, MIT license.
+- [x] **Map renderer** — MapLibre GL JS from day one. No Mapbox GL dependency.
 - [ ] **Offline tile format** — PMTiles vs MBTiles for offline storage?
 - [ ] **Module packaging** — npm packages, or a custom registry?
 - [ ] **Sync protocol** — CRDTs vs last-write-wins for offline conflict resolution?

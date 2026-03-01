@@ -104,7 +104,7 @@ The MVP delivers the minimum loop: sign up, create routes, manage them, and exch
 
 | Feature | Details |
 |---------|---------|
-| Base map provider | Mapbox GL JS |
+| Base map provider | MapLibre GL JS |
 | Default layers | Street, satellite, terrain/topo |
 | Map controls | Zoom, pan, geolocate (browser location), fullscreen |
 | Layer switching | Toggle between available base layers |
@@ -115,8 +115,8 @@ The MVP delivers the minimum loop: sign up, create routes, manage them, and exch
 
 | Concern | Decision |
 |---------|----------|
-| Routing engine | [TBD — evaluate OSRM, Valhalla, GraphHopper, or Mapbox Directions API] |
-| Map tiles | Mapbox (free tier covers initial usage; architecture should allow swapping providers) |
+| Routing engine | Valhalla (self-hosted, MIT license) — supports bike, hike, and car profiles |
+| Map tiles | MapLibre GL JS with configurable tile sources (Mapbox, OSM, or custom) |
 | GPX parsing | Server-side parsing and validation |
 | Elevation data | Source from routing engine or Mapbox Terrain API |
 | Responsive design | Web app must work on desktop and mobile browsers (no native app yet) |
@@ -166,7 +166,7 @@ The following are planned for future iterations but explicitly excluded from v0.
 
 ## 9. Open Questions
 
-- [ ] Routing engine selection — self-hosted (OSRM/Valhalla) vs. API-based (Mapbox Directions)?
+- [x] Routing engine selection — **Valhalla** (self-hosted). Covers all activity profiles, MIT license, self-hostable, supports turn-by-turn for future nav.
 - [ ] Auth provider — custom implementation vs. third-party (e.g. Supabase Auth, Keycloak)?
 - [ ] Hosting strategy for the reference instance (where does the "official" free instance live)?
 - [ ] Licensing model for community modules

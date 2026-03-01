@@ -61,7 +61,7 @@ trailbase/
 
 ### Web App (`app/`)
 - Framework: React + TypeScript (Vite)
-- Maps: react-map-gl (Mapbox GL JS)
+- Maps: react-map-gl (MapLibre GL JS)
 - Routing: React Router
 - State management: TBD (start with React context, evaluate as needed)
 
