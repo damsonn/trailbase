@@ -167,7 +167,7 @@ The following are planned for future iterations but explicitly excluded from v0.
 ## 9. Open Questions
 
 - [x] Routing engine selection — **Valhalla** (self-hosted). Covers all activity profiles, MIT license, self-hostable, supports turn-by-turn for future nav.
-- [ ] Auth provider — custom implementation vs. third-party (e.g. Supabase Auth, Keycloak)?
+- [x] Auth provider — **Better-Auth** (TypeScript library, session-based, Drizzle adapter). No external service required.
 - [ ] Hosting strategy for the reference instance (where does the "official" free instance live)?
 - [ ] Licensing model for community modules
 - [ ] Elevation data source and accuracy requirements

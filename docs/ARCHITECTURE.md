@@ -329,8 +329,9 @@ Offline support is a v1.0 feature (native mobile app), but the architecture acco
 ```
 
 - Users select a bounding box and zoom range to download for offline use
-- Tiles stored in SQLite (mobile) or Origin Private File System (web, future)
-- Tile format must be open — prefer **PMTiles** (single-file archive, open spec) over proprietary `.mbtiles` for distribution
+- Tile format: **MBTiles** (SQLite-based, mature tooling ecosystem, open spec)
+- Stored in SQLite (mobile) or via SQLite WASM / OPFS (web, future)
+- Served via tile server (e.g. `martin`) for online use, read directly from file for offline
 
 ### 8.2 Offline Route Data
 
@@ -627,7 +628,7 @@ DATABASE_URL=postgres://trailbase:password@db:5432/trailbase
 
 | Concern | Approach |
 |---------|----------|
-| Authentication | Session-based with HTTP-only secure cookies |
+| Authentication | Better-Auth library — session-based with HTTP-only secure cookies, Drizzle adapter |
 | Password storage | bcrypt (cost factor 12+) |
 | CSRF | SameSite cookie + CSRF token for state-changing requests |
 | Input validation | Zod schemas on every endpoint (server-side) |
@@ -654,7 +655,7 @@ DATABASE_URL=postgres://trailbase:password@db:5432/trailbase
 
 - [x] **Routing engine** — Valhalla from day one. Self-hosted, all profiles, MIT license.
 - [x] **Map renderer** — MapLibre GL JS from day one. No Mapbox GL dependency.
-- [ ] **Offline tile format** — PMTiles vs MBTiles for offline storage?
+- [x] **Offline tile format** — MBTiles. Mature ecosystem, wide tooling support, SQLite-based.
 - [ ] **Module packaging** — npm packages, or a custom registry?
-- [ ] **Sync protocol** — CRDTs vs last-write-wins for offline conflict resolution?
-- [ ] **Auth provider** — Custom session implementation vs. integrate with an existing auth library?
+- [x] **Sync protocol** — Last-write-wins with version counter. Simple, fits single-user model. Revisit if collaborative editing is added.
+- [x] **Auth provider** — Better-Auth (TypeScript library, session-based, Drizzle adapter). No external service.

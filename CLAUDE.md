@@ -56,7 +56,7 @@ trailbase/
 - Framework: Hono
 - ORM: Drizzle ORM
 - Validation: Zod (schemas shared with frontend via `shared/`)
-- Auth: Session-based (cookie) — implementation TBD
+- Auth: Better-Auth (session-based, Drizzle adapter)
 - GPX parsing: Server-side with shared logic in `shared/`
 
 ### Web App (`app/`)
