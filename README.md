@@ -59,9 +59,17 @@ docs/     # Documentation (PRD, architecture)
 
 See [docs/PRD.md](docs/PRD.md) for product requirements and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system design.
 
+## Project Tracking
+
+We use **GitHub Issues** to track all work:
+
+- **Milestones** represent epics/phases (e.g., `v0.1`, `v0.2`)
+- **Labels** categorize issues: `backend`, `frontend`, `shared`, `infra`, `bug`, `enhancement`
+- Browse the [issues board](../../issues) to see what's in progress or available
+
 ## Contributing
 
-Contributions are welcome! The project is in its early stages — check the open issues or the PRD for areas where you can help.
+Contributions are welcome! The project is in its early stages — check the [open issues](../../issues) or the PRD for areas where you can help.
 
 ## License
 
