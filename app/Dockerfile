@@ -17,4 +17,4 @@ COPY app/ app/
 RUN pnpm --filter shared build
 
 EXPOSE 5173
-CMD ["pnpm", "--filter", "app", "dev", "--", "--host", "0.0.0.0"]
+CMD ["pnpm", "--filter", "app", "dev"]
