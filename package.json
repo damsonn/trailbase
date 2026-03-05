@@ -5,7 +5,7 @@
   "scripts": {
     "dev:server": "pnpm --filter server dev",
     "dev:app": "pnpm --filter app dev",
-    "dev": "pnpm run --parallel dev:server dev:app",
+    "dev": "pnpm --filter server --filter app --parallel dev",
     "build": "pnpm --filter shared build && pnpm --filter server build && pnpm --filter app build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
