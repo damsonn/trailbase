@@ -13,8 +13,28 @@
 
 - Repository pattern for data access
 - All API responses use envelope pattern (`{ data, meta }` / `{ error }`)
-- Write tests for all service-layer logic
 - Zod schemas in `shared/` are the single source of truth for validation
+
+## Testing Requirements
+
+**Every epic/feature MUST include tests before it can be considered complete.**
+
+### Test coverage expectations
+- **Server**: Unit tests for route handlers (use `app.request()` from Hono), validation edge cases, middleware behavior
+- **App**: Component render tests with React Testing Library, auth state variations, form rendering, navigation links
+- **Shared**: Unit tests for utilities, parsers, schema validation
+
+### Test patterns
+- **Server tests**: Import the Hono `app` and use `app.request()` — no real DB needed for handler-level tests
+- **App component tests**: Use `vi.mock()` with factory for `auth-client.js` — mock at relative path from test file. Use `MemoryRouter` for components that use React Router
+- **Cleanup**: `afterEach(cleanup)` is configured in `app/src/test-setup.ts`
+- **Auth mocking**: Mock `"../lib/auth-client.js"` (or `"./lib/auth-client.js"` from `src/`) with a factory returning `{ useSession, signIn, signUp, signOut }`. Use `vi.fn()` for `useSession` to control return values per test
+
+### Quality gates (run before committing)
+```bash
+pnpm test        # All tests must pass
+pnpm typecheck   # No type errors
+```
 
 ## Project Tracking (Two Layers)
 
