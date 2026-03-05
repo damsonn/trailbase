@@ -1,0 +1,81 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: trailbase
+      POSTGRES_USER: trailbase
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trailbase"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  valhalla:
+    image: ghcr.io/gis-ops/docker-valhalla:latest
+    ports:
+      - "8002:8002"
+    volumes:
+      - valhalla-tiles:/custom_files
+    environment:
+      tile_urls: https://download.geofabrik.de/europe/france-latest.osm.pbf
+      serve_tiles: "True"
+      build_elevation: "False"
+      build_admins: "False"
+      build_time_zones: "False"
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./server/src:/app/server/src
+      - ./shared/src:/app/shared/src
+    environment:
+      DATABASE_URL: postgres://trailbase:${POSTGRES_PASSWORD:-password}@db:5432/trailbase
+      PORT: "3000"
+      CORS_ORIGIN: http://localhost:5173
+      ROUTING_ENGINE: valhalla
+      VALHALLA_URL: http://valhalla:8002
+      ELEVATION_PROVIDER: ${ELEVATION_PROVIDER:-mapbox}
+      OPEN_ELEVATION_URL: http://open-elevation:8080
+      MAP_PROVIDER: ${MAP_PROVIDER:-mapbox}
+      MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-change-me-to-a-random-string}
+
+  app:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      - server
+    volumes:
+      - ./app/src:/app/app/src
+      - ./app/index.html:/app/app/index.html
+      - ./shared/src:/app/shared/src
+    environment:
+      VITE_API_URL: http://server:3000
+
+  # Optional: self-hosted elevation service
+  # Enable with: docker compose --profile elevation up
+  open-elevation:
+    image: openelevation/open-elevation
+    ports:
+      - "8080:8080"
+    profiles:
+      - elevation
+
+volumes:
+  pgdata:
+  valhalla-tiles:
