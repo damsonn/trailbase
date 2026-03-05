@@ -1,5 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Dolt database files (added by bd init)
 .dolt/
 *.db
-.DS_Store
+
+# Vite
+*.local
+
+# Test coverage
+coverage/

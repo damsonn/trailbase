@@ -1,0 +1,25 @@
+{
+  "name": "trailbase",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:server": "pnpm --filter server dev",
+    "dev:app": "pnpm --filter app dev",
+    "dev": "pnpm run --parallel dev:server dev:app",
+    "build": "pnpm --filter shared build && pnpm --filter server build && pnpm --filter app build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.2",
+    "prettier": "^3.8.1",
+    "typescript-eslint": "^8.56.1"
+  }
+}
