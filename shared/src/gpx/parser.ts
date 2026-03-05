@@ -1,24 +1,11 @@
-import type { Coordinate } from "../schemas/route.js";
+import type {
+  ParsedGpx,
+  GpxTrack,
+  GpxWaypoint,
+} from "../schemas/gpx.js";
 
-/** Parsed GPX data in a normalized format. */
-export interface ParsedGpx {
-  name?: string;
-  description?: string;
-  tracks: GpxTrack[];
-  waypoints: GpxWaypoint[];
-}
-
-export interface GpxTrack {
-  name?: string;
-  coordinates: Coordinate[];
-  elevations: (number | null)[];
-}
-
-export interface GpxWaypoint {
-  name?: string;
-  coordinate: Coordinate;
-  elevation?: number;
-}
+// Re-export types for consumers that import from gpx/parser
+export type { ParsedGpx, GpxTrack, GpxWaypoint };
 
 // TODO: Implement GPX XML parsing
 // This will be implemented in a future task using a streaming XML parser
