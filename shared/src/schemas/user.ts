@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const registerSchema = z.object({
+  name: z.string().min(1).max(255),
   email: z.string().email(),
   password: z.string().min(8).max(128),
 });
@@ -17,9 +18,18 @@ export const resetPasswordSchema = z.object({
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
+export const newPasswordSchema = z.object({
+  newPassword: z.string().min(8).max(128),
+  token: z.string(),
+});
+export type NewPasswordInput = z.infer<typeof newPasswordSchema>;
+
 export const userSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
+  name: z.string(),
   email: z.string().email(),
+  emailVerified: z.boolean(),
+  image: z.string().nullable().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

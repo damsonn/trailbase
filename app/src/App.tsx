@@ -1,12 +1,34 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { NavBar } from "./components/NavBar.js";
+import { ProtectedRoute } from "./components/ProtectedRoute.js";
+import { LoginPage } from "./pages/LoginPage.js";
+import { RegisterPage } from "./pages/RegisterPage.js";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage.js";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage.js";
+import { DashboardPage } from "./pages/DashboardPage.js";
+
 export function App() {
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-800">
-      <header className="border-b border-neutral-200 bg-white px-6 py-4">
-        <h1 className="text-2xl font-bold text-primary">Trail base</h1>
-      </header>
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        <p className="text-lg">Welcome to Trail base.</p>
-      </main>
-    </div>
+    <BrowserRouter>
+      <div className="min-h-screen bg-neutral-50 text-neutral-800">
+        <NavBar />
+        <main>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   );
 }

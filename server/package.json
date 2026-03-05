@@ -18,20 +18,23 @@
     "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
-    "@trailbase/shared": "workspace:*",
+    "@better-auth/drizzle-adapter": "^1.5.3",
     "@hono/node-server": "^1.14.0",
-    "hono": "^4.7.0",
-    "drizzle-orm": "^0.41.0",
-    "postgres": "^3.4.0",
+    "@trailbase/shared": "workspace:*",
+    "bcryptjs": "^3.0.3",
     "better-auth": "^1.2.0",
     "dotenv": "^16.4.0",
+    "drizzle-orm": "^0.41.0",
+    "hono": "^4.7.0",
+    "postgres": "^3.4.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^22.0.0",
+    "drizzle-kit": "^0.31.4",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0",
-    "drizzle-kit": "^0.31.4"
+    "vitest": "^3.0.0"
   }
 }

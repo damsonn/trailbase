@@ -11,25 +11,41 @@ const sql = postgres(databaseUrl);
 async function seed() {
   console.log("Seeding database...");
 
-  // Create a demo user (password: "password123" hashed with bcrypt cost 12)
-  const [user] = await sql`
-    INSERT INTO users (id, email, password_hash)
-    VALUES (
-      'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-      'demo@trailbase.app',
-      '$2b$12$LJ3P5gF1S1HG2OQ/t5soUOLIjY/YTjE7pO2bKXHq3TGhLh.VJX2ZK'
-    )
-    ON CONFLICT (email) DO NOTHING
-    RETURNING id
+  const userId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+
+  // Create a demo user (Better-Auth schema: user + account tables)
+  // Password: "password123" hashed with bcrypt cost 12
+  const [existingUser] = await sql`
+    SELECT id FROM "user" WHERE email = 'demo@trailbase.app'
   `;
 
-  if (!user) {
+  if (existingUser) {
     console.log("Demo user already exists, skipping seed.");
     await sql.end();
     return;
   }
 
-  const userId = user.id;
+  await sql`
+    INSERT INTO "user" (id, name, email, email_verified)
+    VALUES (
+      ${userId},
+      'Demo User',
+      'demo@trailbase.app',
+      false
+    )
+  `;
+
+  // Store credentials in the account table (Better-Auth pattern)
+  await sql`
+    INSERT INTO "account" (id, user_id, account_id, provider_id, password)
+    VALUES (
+      'acct-' || ${userId},
+      ${userId},
+      ${userId},
+      'credential',
+      '$2b$12$LJ3P5gF1S1HG2OQ/t5soUOLIjY/YTjE7pO2bKXHq3TGhLh.VJX2ZK'
+    )
+  `;
 
   // Sydney Harbour Bridge to Bondi Beach route
   await sql`
