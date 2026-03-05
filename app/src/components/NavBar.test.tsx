@@ -52,6 +52,7 @@ describe("NavBar", () => {
 
   it("shows Trail base brand link", () => {
     renderWithRouter(<NavBar />);
-    expect(screen.getByText("Trail base")).toHaveAttribute("href", "/");
+    const brandText = screen.getByText("Trail base");
+    expect(brandText.closest("a")).toHaveAttribute("href", "/");
   });
 });

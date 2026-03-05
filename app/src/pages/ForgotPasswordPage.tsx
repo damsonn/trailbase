@@ -48,9 +48,10 @@ export function ForgotPasswordPage() {
 
   return (
     <div className="mx-auto max-w-sm px-6 py-16">
-      <h1 className="mb-2 text-center text-2xl font-bold text-neutral-900">
-        Reset password
-      </h1>
+      <div className="mb-2 flex flex-col items-center gap-3">
+        <img src="/logo-icon.png" alt="Trail base" className="h-16 w-16" />
+        <h1 className="text-2xl font-bold text-neutral-900">Reset password</h1>
+      </div>
       <p className="mb-8 text-center text-sm text-neutral-500">
         Enter your email and we'll send you a reset link.
       </p>

@@ -7,8 +7,9 @@ export function NavBar() {
   return (
     <header className="border-b border-neutral-200 bg-white px-6 py-4">
       <div className="mx-auto flex max-w-7xl items-center justify-between">
-        <Link to="/" className="text-2xl font-bold text-primary">
-          Trail base
+        <Link to="/" className="flex items-center gap-2">
+          <img src="/logo-icon.png" alt="" className="h-8 w-8" />
+          <span className="text-xl font-bold text-primary">Trail base</span>
         </Link>
 
         <nav className="flex items-center gap-4">
