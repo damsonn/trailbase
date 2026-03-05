@@ -1,4 +1,4 @@
-# TrailBase - Architecture Document
+# Trail base - Architecture Document
 
 > **Status:** Draft | **Last updated:** 2026-03-01
 > Companion to [PRD.md](./PRD.md). Describes system design, data flows, and key technical decisions.
@@ -112,7 +112,7 @@ sessions
 
 ## 4. Open Formats & Data Sovereignty
 
-TrailBase treats open formats as a core feature, not an afterthought.
+Trail base treats open formats as a core feature, not an afterthought.
 
 ### 4.1 Canonical Formats
 
@@ -355,11 +355,11 @@ Offline support is a v1.0 feature (native mobile app), but the architecture acco
 
 ### 9.1 Module Architecture (v0.3+)
 
-Modules are self-contained packages that integrate with TrailBase through defined extension points. They allow sharing data to and from third-party services without coupling the core to any specific provider.
+Modules are self-contained packages that integrate with Trail base through defined extension points. They allow sharing data to and from third-party services without coupling the core to any specific provider.
 
 ```
 ┌──────────────────────────────────────────────┐
-│                 TrailBase Core                │
+│                Trail base Core                │
 │                                              │
 │  Extension Points:                           │
 │  ├── ImportAdapter    (ingest from service)   │

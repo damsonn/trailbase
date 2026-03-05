@@ -1,10 +1,10 @@
-# TrailBase
+# Trail base
 
 An open-source route management, viewer, and navigation platform for cycling, hiking, and driving. Plan routes, import/export GPX files, and manage your outdoor adventures — free, with no subscriptions or vendor lock-in.
 
-## Why TrailBase?
+## Why Trail base?
 
-Existing tools like RideWithGPS and Gaia GPS lock core features behind paid tiers and trap your data in proprietary platforms. TrailBase is different:
+Existing tools like RideWithGPS and Gaia GPS lock core features behind paid tiers and trap your data in proprietary platforms. Trail base is different:
 
 - **Free and open-source** — no paywalled features, no subscription tiers
 - **Data ownership** — import, export, and self-host your data at any time

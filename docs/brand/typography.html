@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Trail base — Typography</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: #FAFAF5; color: #1E1C1A; padding: 40px; }
+  h1 { font-size: 24px; margin-bottom: 8px; }
+  p.subtitle { color: #8A8578; margin-bottom: 40px; }
+
+  .section { margin-bottom: 40px; }
+  .section h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: #8A8578; margin-bottom: 16px; }
+
+  .option {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  .type-sample { margin-bottom: 24px; }
+  .type-sample .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #8A8578; margin-bottom: 8px; }
+
+  .scale { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+  .scale .row { display: flex; align-items: baseline; gap: 16px; }
+  .scale .row .size { font-size: 11px; color: #8A8578; font-family: monospace; min-width: 60px; }
+
+  .weights { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 20px; }
+  .weights span { color: #3A3632; }
+
+  .sample-card {
+    background: #FAFAF5; border-radius: 12px; padding: 24px;
+    max-width: 480px; border: 1px solid #E0DCD0;
+  }
+  .sample-card h3 { margin-bottom: 4px; }
+  .sample-card .meta { color: #8A8578; font-size: 13px; margin-bottom: 12px; }
+  .sample-card .body { font-size: 15px; line-height: 1.6; color: #3A3632; margin-bottom: 16px; }
+  .sample-card .data { font-size: 13px; color: #8A8578; display: flex; gap: 20px; }
+  .sample-card .data span { font-variant-numeric: tabular-nums; }
+
+  .tags { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tag { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 500; background: #2D5016; color: white; }
+</style>
+</head>
+<body>
+
+<h1>Trail base — Typography</h1>
+<p class="subtitle">DM Sans — heading + body</p>
+
+<div class="option">
+  <div class="type-sample">
+    <div class="label">Type Scale</div>
+    <div class="scale">
+      <div class="row"><span class="size">36px 700</span><span style="font-size:36px;font-weight:700">Morning Ridge Loop Trail</span></div>
+      <div class="row"><span class="size">28px 700</span><span style="font-size:28px;font-weight:700">Route Details</span></div>
+      <div class="row"><span class="size">20px 600</span><span style="font-size:20px;font-weight:600">Elevation Profile</span></div>
+      <div class="row"><span class="size">16px 500</span><span style="font-size:16px;font-weight:500">Waypoint Settings</span></div>
+      <div class="row"><span class="size">15px 400</span><span style="font-size:15px;font-weight:400">Body text — The trail follows the river valley for 12km before ascending through pine forest to the ridgeline viewpoint at 1,840m.</span></div>
+      <div class="row"><span class="size">13px 400</span><span style="font-size:13px;font-weight:400;color:#8A8578">Caption — Last updated 3 days ago · 42.3 km · 860m gain</span></div>
+    </div>
+  </div>
+
+  <div class="type-sample">
+    <div class="label">Weights</div>
+    <div class="weights" style="font-size:18px">
+      <span style="font-weight:300">Light 300</span>
+      <span style="font-weight:400">Regular 400</span>
+      <span style="font-weight:500">Medium 500</span>
+      <span style="font-weight:600">SemiBold 600</span>
+      <span style="font-weight:700">Bold 700</span>
+    </div>
+  </div>
+
+  <div class="type-sample">
+    <div class="label">Sample Card</div>
+    <div class="sample-card">
+      <h3 style="font-size:20px;font-weight:700">Morning Ridge Loop</h3>
+      <div class="meta">Created by you · March 2, 2026</div>
+      <div class="tags"><span class="tag">Cycling</span><span class="tag" style="background:#7A8C3A">Gravel</span></div>
+      <div class="body">A scenic loop through the ridge valley with a challenging climb at km 28. Best ridden in spring when the wildflowers are out.</div>
+      <div class="data">
+        <span>42.3 km</span>
+        <span>860m ↑</span>
+        <span>12 waypoints</span>
+        <span>Est. 2h 45m</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,4 +1,4 @@
-# TrailBase - Product Requirements Document
+# Trail base - Product Requirements Document
 
 > **Status:** Draft | **Last updated:** 2026-03-01
 > This is a living document. Sections marked [TBD] will be expanded as the project evolves.
@@ -7,7 +7,7 @@
 
 ## 1. Overview
 
-**TrailBase** is an open-source route management, viewer, and navigation platform for cycling, hiking, and driving. It combines the route-planning strengths of [RideWithGPS](https://ridewithgps.com) with the map-layer depth of [Gaia GPS](https://gaiagps.com) — without subscriptions, vendor lock-in, or paywalled core features.
+**Trail base** is an open-source route management, viewer, and navigation platform for cycling, hiking, and driving. It combines the route-planning strengths of [RideWithGPS](https://ridewithgps.com) with the map-layer depth of [Gaia GPS](https://gaiagps.com) — without subscriptions, vendor lock-in, or paywalled core features.
 
 ### Problem
 
@@ -39,7 +39,7 @@ A free, community-driven platform where users fully own their route data and can
 
 ## 3. Competitive Landscape
 
-| Capability | RideWithGPS | Gaia GPS | **TrailBase** |
+| Capability | RideWithGPS | Gaia GPS | **Trail base** |
 |-----------|-------------|----------|---------------|
 | Route planning | Advanced (cycling-focused) | Snap-to-trail / freehand | Snap-to-road + point-to-point |
 | Activity types | Cycling | Hiking / backcountry / 4x4 | Bike, hike, car |

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**TrailBase** — TypeScript monorepo: `server/` (Hono), `app/` (React/Vite), `shared/` (Zod schemas, GPX, geo utils), `mobile/` (future).
+**Trail base** — TypeScript monorepo: `server/` (Hono), `app/` (React/Vite), `shared/` (Zod schemas, GPX, geo utils), `mobile/` (future).
 
 ### Docs (source of truth)
 
