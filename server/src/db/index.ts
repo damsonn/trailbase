@@ -24,9 +24,11 @@ export function getDb() {
 export const db = (() => {
   try {
     return createDb();
-  } catch {
-    // In test environment without DATABASE_URL, return undefined
-    // The auth module will fail at runtime if used without DB
+  } catch (err) {
+    console.error(
+      "[DB] Failed to initialize database connection:",
+      err instanceof Error ? err.message : err,
+    );
     return undefined as unknown as ReturnType<typeof createDb>;
   }
 })();
