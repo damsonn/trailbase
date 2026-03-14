@@ -95,6 +95,38 @@ export async function deleteRoute(id: string) {
   });
 }
 
+// ── Routing API ─────────────────────────────────────────────────────────────
+
+export interface DirectionsParams {
+  waypoints: { lat: number; lng: number }[];
+  profile: string;
+  options?: {
+    avoidHighways?: boolean;
+    avoidTolls?: boolean;
+    preferTrails?: boolean;
+  };
+}
+
+export interface DirectionsResult {
+  geometry: { type: "LineString"; coordinates: number[][] };
+  distanceM: number;
+  elevationGainM: number;
+  elevationLossM: number;
+  durationS?: number;
+  segments: {
+    geometry: { type: "LineString"; coordinates: number[][] };
+    distanceM: number;
+    durationS?: number;
+  }[];
+}
+
+export async function fetchDirections(params: DirectionsParams) {
+  return request<{ data: DirectionsResult }>("/routing/directions", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface RouteItem {

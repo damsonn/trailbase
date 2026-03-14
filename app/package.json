@@ -15,9 +15,12 @@
   "dependencies": {
     "@trailbase/shared": "workspace:*",
     "better-auth": "^1.5.3",
+    "maplibre-gl": "^5.20.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.13.1"
+    "react-map-gl": "^8.1.0",
+    "react-router-dom": "^7.13.1",
+    "recharts": "^3.8.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

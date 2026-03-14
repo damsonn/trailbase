@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { auth } from "./auth.js";
 import { routeRoutes } from "./routes/routes.js";
+import { routingRoutes } from "./routes/routing.js";
 
 export const app = new Hono();
 
@@ -26,3 +27,6 @@ app.on(["POST", "GET"], "/api/auth/**", (c) => {
 
 // Mount route CRUD
 app.route("/api/routes", routeRoutes);
+
+// Mount routing/directions
+app.route("/api/routing", routingRoutes);
