@@ -18,7 +18,7 @@ import { App } from "./App.js";
 describe("App", () => {
   it("renders without crashing", () => {
     render(<App />);
-    expect(screen.getByText("Trail base")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Log in" })).toBeInTheDocument();
   });
 
   it("shows login form for unauthenticated users", () => {

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { NavBar } from "./components/NavBar.js";
 import { ProtectedRoute } from "./components/ProtectedRoute.js";
 import { LoginPage } from "./pages/LoginPage.js";
@@ -7,12 +7,16 @@ import { ForgotPasswordPage } from "./pages/ForgotPasswordPage.js";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
 
-export function App() {
+const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
+
+function AppLayout() {
+  const { pathname } = useLocation();
+  const isAuthPage = AUTH_ROUTES.includes(pathname);
+
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-neutral-50 text-neutral-800">
-        <NavBar />
-        <main>
+    <div className="min-h-screen bg-neutral-50 text-neutral-800">
+      {!isAuthPage && <NavBar />}
+      <main>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
@@ -29,6 +33,13 @@ export function App() {
           </Routes>
         </main>
       </div>
+  );
+}
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <AppLayout />
     </BrowserRouter>
   );
 }
