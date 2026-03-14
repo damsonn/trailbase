@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { auth } from "./auth.js";
+import { routeRoutes } from "./routes/routes.js";
 
 export const app = new Hono();
 
@@ -22,3 +23,6 @@ app.get("/api/health", (c) => {
 app.on(["POST", "GET"], "/api/auth/**", (c) => {
   return auth.handler(c.req.raw);
 });
+
+// Mount route CRUD
+app.route("/api/routes", routeRoutes);

@@ -6,6 +6,8 @@ import { RegisterPage } from "./pages/RegisterPage.js";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage.js";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
+import { RoutesPage } from "./pages/RoutesPage.js";
+import { RouteDetailPage } from "./pages/RouteDetailPage.js";
 
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
@@ -27,6 +29,22 @@ function AppLayout() {
               element={
                 <ProtectedRoute>
                   <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/routes"
+              element={
+                <ProtectedRoute>
+                  <RoutesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/routes/:id"
+              element={
+                <ProtectedRoute>
+                  <RouteDetailPage />
                 </ProtectedRoute>
               }
             />

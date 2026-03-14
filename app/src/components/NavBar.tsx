@@ -15,6 +15,12 @@ export function NavBar() {
         <nav className="flex items-center gap-4">
           {isPending ? null : session ? (
             <>
+              <Link
+                to="/routes"
+                className="text-sm font-medium text-neutral-800 hover:text-primary"
+              >
+                Routes
+              </Link>
               <span className="text-sm text-neutral-500">
                 {session.user.email}
               </span>
