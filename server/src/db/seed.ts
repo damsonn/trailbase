@@ -17,16 +17,6 @@ async function seed() {
   //   Email:    demo@trailbase.app
   //   Password: password
   // ───────────────────────────────────────────────────────────────────────
-  const [existingUser] = await sql`
-    SELECT id FROM "user" WHERE email = 'demo@trailbase.app'
-  `;
-
-  if (existingUser) {
-    console.log("Demo user already exists, skipping seed.");
-    await sql.end();
-    return;
-  }
-
   await sql`
     INSERT INTO "user" (id, name, email, email_verified)
     VALUES (
@@ -35,9 +25,9 @@ async function seed() {
       'demo@trailbase.app',
       false
     )
+    ON CONFLICT (id) DO NOTHING
   `;
 
-  // Store credentials in the account table (Better-Auth pattern)
   await sql`
     INSERT INTO "account" (id, user_id, account_id, provider_id, password)
     VALUES (
@@ -47,6 +37,7 @@ async function seed() {
       'credential',
       '$2b$10$QR8BcZq.iJnsGm2vQyySB.vMMv5ojae2jxIxD7/oZ9qdtJes9foym'
     )
+    ON CONFLICT (id) DO UPDATE SET password = EXCLUDED.password
   `;
 
   // Sydney Harbour Bridge to Bondi Beach route
@@ -65,6 +56,7 @@ async function seed() {
       'manual',
       '{"tags": ["coastal", "scenic"]}'::jsonb
     )
+    ON CONFLICT (id) DO NOTHING
   `;
 
   // Waypoints for the route
@@ -74,6 +66,7 @@ async function seed() {
       ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', ST_GeogFromText('POINT(151.2108 -33.8523)'), 5, 0, 'Harbour Bridge', 'stop'),
       ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', ST_GeogFromText('POINT(151.2231 -33.8688)'), 25, 1, 'Hyde Park', 'via'),
       ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', ST_GeogFromText('POINT(151.2741 -33.8915)'), 10, 2, 'Bondi Beach', 'stop')
+    ON CONFLICT (id) DO NOTHING
   `;
 
   // Blue Mountains hike
@@ -92,6 +85,7 @@ async function seed() {
       'manual',
       '{"tags": ["mountains", "loop", "views"]}'::jsonb
     )
+    ON CONFLICT (id) DO NOTHING
   `;
 
   await sql`
@@ -100,6 +94,7 @@ async function seed() {
       ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', ST_GeogFromText('POINT(150.3124 -33.7320)'), 920, 0, 'Echo Point', 'stop'),
       ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', ST_GeogFromText('POINT(150.3156 -33.7310)'), 750, 1, 'Giant Stairway', 'poi'),
       ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', ST_GeogFromText('POINT(150.3124 -33.7320)'), 920, 2, 'Echo Point', 'stop')
+    ON CONFLICT (id) DO NOTHING
   `;
 
   console.log("Seed complete: 1 user, 2 routes, 6 waypoints");
