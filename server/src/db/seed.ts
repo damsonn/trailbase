@@ -13,8 +13,10 @@ async function seed() {
 
   const userId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
 
-  // Create a demo user (Better-Auth schema: user + account tables)
-  // Password: "password123" hashed with bcrypt cost 12
+  // ── Dev user ────────────────────────────────────────────────────────────
+  //   Email:    demo@trailbase.app
+  //   Password: password
+  // ───────────────────────────────────────────────────────────────────────
   const [existingUser] = await sql`
     SELECT id FROM "user" WHERE email = 'demo@trailbase.app'
   `;
@@ -43,7 +45,7 @@ async function seed() {
       ${userId},
       ${userId},
       'credential',
-      '$2b$12$LJ3P5gF1S1HG2OQ/t5soUOLIjY/YTjE7pO2bKXHq3TGhLh.VJX2ZK'
+      '$2b$10$QR8BcZq.iJnsGm2vQyySB.vMMv5ojae2jxIxD7/oZ9qdtJes9foym'
     )
   `;
 
