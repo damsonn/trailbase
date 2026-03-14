@@ -114,6 +114,14 @@ bd automatically syncs with git:
 - Check `bd ready` before asking "what should I work on?"
 - Do NOT create markdown TODO lists for task tracking
 
+## Feature Completion Checklist
+
+When a feature or epic is finished, **always ask the user** before committing and closing the GitHub issue. Do not auto-commit or auto-close — confirm first:
+
+1. **Ask to commit** — show the user what changed and propose a commit message
+2. **Ask to close the GH issue** — confirm with the user before running `gh issue close`
+3. **Push** — `git push` after the user approves
+
 ## Landing the Plane (Session Completion)
 
 When ending a work session, complete ALL steps below. Work is NOT complete until `git push` succeeds.
