@@ -80,22 +80,12 @@ export function RouteDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // Map state
-  const [mapViewState, setMapViewState] = useState<MapViewState | null>(null);
-
   const initialMapView = useMemo<MapViewState | null>(() => {
     if (!route || route.waypoints.length === 0) return null;
     return computeBoundsView(
       route.waypoints.map((wp) => wp.position),
     );
   }, [route]);
-
-  // Set map view when route loads
-  useEffect(() => {
-    if (initialMapView && !mapViewState) {
-      setMapViewState(initialMapView);
-    }
-  }, [initialMapView, mapViewState]);
 
   const routeGeoJSON = useMemo(() => {
     if (!route || route.waypoints.length < 2) return null;
@@ -285,26 +275,39 @@ export function RouteDetailPage() {
       </div>
 
       {/* Map */}
-      {mapViewState && route.waypoints.length > 0 && (
+      {initialMapView && route.waypoints.length > 0 && (
         <div className="mb-8 h-[60vh] w-full overflow-hidden rounded-button border border-neutral-200">
           <BaseMap
-            viewState={mapViewState}
-            onMove={setMapViewState}
+            initialViewState={initialMapView}
             cursor="grab"
           >
-            {/* Waypoint markers */}
-            {route.waypoints.map((wp, idx) => (
-              <Marker
-                key={wp.id}
-                longitude={wp.position.lng}
-                latitude={wp.position.lat}
-                anchor="center"
-              >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-primary text-xs font-bold text-white shadow">
-                  {idx + 1}
-                </div>
-              </Marker>
-            ))}
+            {/* Waypoint markers — group overlapping positions */}
+            {(() => {
+              const groups = new Map<string, number[]>();
+              route.waypoints.forEach((wp, idx) => {
+                const key = `${wp.position.lat},${wp.position.lng}`;
+                const g = groups.get(key);
+                if (g) g.push(idx + 1);
+                else groups.set(key, [idx + 1]);
+              });
+              return Array.from(groups.entries()).map(([key, nums]) => {
+                const parts = key.split(",").map(Number);
+                const lat = parts[0]!;
+                const lng = parts[1]!;
+                return (
+                  <Marker
+                    key={key}
+                    longitude={lng}
+                    latitude={lat}
+                    anchor="center"
+                  >
+                    <div className="flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-primary px-1 text-xs font-bold text-white shadow">
+                      {nums.length === 1 ? nums[0] : `${nums[0]}/${nums[nums.length - 1]}`}
+                    </div>
+                  </Marker>
+                );
+              });
+            })()}
 
             {/* Route line */}
             {routeGeoJSON && (

@@ -12,7 +12,12 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { browserName: "chromium" },
+      use: {
+        browserName: "chromium",
+        launchOptions: {
+          args: ["--enable-unsafe-swiftshader"],
+        },
+      },
     },
   ],
   // Don't start servers — assumes they're already running (dev or docker-compose)

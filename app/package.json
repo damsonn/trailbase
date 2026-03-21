@@ -15,7 +15,7 @@
   "dependencies": {
     "@trailbase/shared": "workspace:*",
     "better-auth": "^1.5.3",
-    "maplibre-gl": "^5.20.1",
+    "maplibre-gl": "^4.7.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-map-gl": "^8.1.0",

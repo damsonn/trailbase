@@ -25,7 +25,10 @@ const DEFAULT_VIEW: MapViewState = {
 };
 
 export interface BaseMapProps {
+  /** Controlled view state — sets map position every render */
   viewState?: MapViewState;
+  /** Uncontrolled initial view state — sets position only on mount */
+  initialViewState?: MapViewState;
   onMove?: (viewState: MapViewState) => void;
   onClick?: (e: MapLayerMouseEvent) => void;
   onContextMenu?: (e: MapLayerMouseEvent) => void;
@@ -36,6 +39,7 @@ export interface BaseMapProps {
 
 export function BaseMap({
   viewState,
+  initialViewState,
   onMove,
   onClick,
   onContextMenu,
@@ -52,10 +56,15 @@ export function BaseMap({
     [onMove],
   );
 
+  // Use controlled mode if viewState is provided, otherwise uncontrolled
+  const viewProps = viewState
+    ? viewState
+    : { initialViewState: initialViewState ?? DEFAULT_VIEW };
+
   return (
     <Map
       ref={mapRef}
-      {...(viewState ?? DEFAULT_VIEW)}
+      {...viewProps}
       onMove={handleMove}
       onClick={onClick}
       onContextMenu={onContextMenu}
