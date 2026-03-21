@@ -41,7 +41,7 @@ describe("auth integration", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as { user: { email: string; name: string; password?: string } };
     expect(body.user).toBeDefined();
     expect(body.user.email).toBe(TEST_USER.email);
     expect(body.user.name).toBe(TEST_USER.name);
@@ -70,7 +70,7 @@ describe("auth integration", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as { user: { email: string } };
     expect(body.user).toBeDefined();
     expect(body.user.email).toBe(TEST_USER.email);
     // Session is set via cookie
@@ -110,7 +110,7 @@ describe("auth integration", () => {
     });
 
     expect(sessionRes.status).toBe(200);
-    const body = await sessionRes.json();
+    const body = (await sessionRes.json()) as { user: { email: string } };
     expect(body.user).toBeDefined();
     expect(body.user.email).toBe(TEST_USER.email);
   });

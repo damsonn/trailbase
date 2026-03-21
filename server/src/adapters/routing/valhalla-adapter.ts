@@ -99,8 +99,8 @@ export class ValhallaAdapter implements RoutingProvider {
     }
 
     // Calculate elevation stats from coordinates if elevation data present
-    let elevationGainM = 0;
-    let elevationLossM = 0;
+    const elevationGainM = 0;
+    const elevationLossM = 0;
 
     // Valhalla summary provides elevation data
     for (const leg of legs) {

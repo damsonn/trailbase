@@ -32,6 +32,7 @@
 
 ### Quality gates (run before committing)
 ```bash
+pnpm lint        # No lint errors
 pnpm test        # All tests must pass
 pnpm typecheck   # No type errors
 ```

@@ -1,3 +1,4 @@
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -18,8 +19,8 @@ vi.mock("../lib/api.js", () => ({
 
 // Mock react-map-gl/maplibre — avoid WebGL in tests
 // The mock Map forwards onClick so tests can simulate map clicks
-vi.mock("react-map-gl/maplibre", () => {
-  const React = require("react");
+vi.mock("react-map-gl/maplibre", async () => {
+  const { default: React } = await import("react");
   return {
     __esModule: true,
     default: React.forwardRef(function MockMap(

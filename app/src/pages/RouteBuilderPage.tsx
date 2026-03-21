@@ -173,7 +173,6 @@ export function RouteBuilderPage() {
   // Re-fetch route when waypoints change (handles undo/redo too)
   useEffect(() => {
     fetchRoute(waypoints);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [waypoints]);
 
   // Drag waypoint on map
