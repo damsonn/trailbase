@@ -37,6 +37,22 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: trailbase
+          POSTGRES_PASSWORD: trailbase
+          POSTGRES_DB: trailbase_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U trailbase"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DATABASE_URL: postgresql://trailbase:trailbase@localhost:5432/trailbase_test
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -46,6 +62,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @trailbase/shared build
+      - run: pnpm --filter server db:migrate
       - run: pnpm test
 
   build:
