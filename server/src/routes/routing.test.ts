@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { directionsRequestSchema } from "@trailbase/shared";
 import { app } from "../app.js";
+import { ValhallaAdapter } from "../adapters/routing/valhalla-adapter.js";
 
 // ── Auth guard tests ────────────────────────────────────────────────────────
 
@@ -90,5 +91,49 @@ describe("directionsRequestSchema", () => {
       });
       expect(result.success).toBe(true);
     }
+  });
+});
+
+// ── Valhalla adapter error handling ────────────────────────────────────────
+
+describe("ValhallaAdapter error handling", () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("throws descriptive error when Valhalla is unreachable", async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+
+    const adapter = new ValhallaAdapter("http://localhost:9999");
+
+    await expect(
+      adapter.getRoute({
+        waypoints: [
+          { lat: -33.8688, lng: 151.2093 },
+          { lat: -33.8568, lng: 151.2153 },
+        ],
+        profile: "bike",
+      }),
+    ).rejects.toThrow("Routing service unavailable (http://localhost:9999). Is Valhalla running?");
+  });
+
+  it("throws on non-ok HTTP response from Valhalla", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response("Internal Server Error", { status: 500 }),
+    );
+
+    const adapter = new ValhallaAdapter("http://localhost:9999");
+
+    await expect(
+      adapter.getRoute({
+        waypoints: [
+          { lat: -33.8688, lng: 151.2093 },
+          { lat: -33.8568, lng: 151.2153 },
+        ],
+        profile: "bike",
+      }),
+    ).rejects.toThrow("Valhalla error (500)");
   });
 });

@@ -49,11 +49,18 @@ export class ValhallaAdapter implements RoutingProvider {
       directions_options: { units: "kilometers" },
     };
 
-    const res = await fetch(`${this.baseUrl}/route`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(valhallaReq),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${this.baseUrl}/route`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(valhallaReq),
+      });
+    } catch {
+      throw new Error(
+        `Routing service unavailable (${this.baseUrl}). Is Valhalla running?`,
+      );
+    }
 
     if (!res.ok) {
       const body = await res.text();

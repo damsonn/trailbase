@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { RouteBuilderPage } from "./RouteBuilderPage.js";
+import { fetchDirections } from "../lib/api.js";
 
 // Mock auth
 vi.mock("../lib/auth-client.js", () => ({
@@ -16,6 +17,7 @@ vi.mock("../lib/api.js", () => ({
 }));
 
 // Mock react-map-gl/maplibre — avoid WebGL in tests
+// The mock Map forwards onClick so tests can simulate map clicks
 vi.mock("react-map-gl/maplibre", () => {
   const React = require("react");
   return {
@@ -24,7 +26,19 @@ vi.mock("react-map-gl/maplibre", () => {
       props: { children?: React.ReactNode; onClick?: (e: unknown) => void },
       ref: React.Ref<unknown>,
     ) {
-      return React.createElement("div", { "data-testid": "map", ref }, props.children);
+      return React.createElement(
+        "div",
+        {
+          "data-testid": "map",
+          ref,
+          onClick: () =>
+            props.onClick?.({
+              lngLat: { lat: -33.87 + Math.random() * 0.01, lng: 151.21 },
+              preventDefault: () => {},
+            }),
+        },
+        props.children,
+      );
     }),
     Source: ({ children }: { children?: React.ReactNode }) =>
       React.createElement("div", { "data-testid": "map-source" }, children),
@@ -97,5 +111,31 @@ describe("RouteBuilderPage", () => {
     // "Waypoints" label and "0" value
     expect(screen.getByText("Waypoints")).toBeInTheDocument();
     expect(screen.getByText("0")).toBeInTheDocument();
+  });
+
+  it("displays routing error when fetchDirections fails", async () => {
+    const mockFetchDirections = vi.mocked(fetchDirections);
+    mockFetchDirections.mockRejectedValue(
+      new Error("Routing service unavailable (http://localhost:8002). Is Valhalla running?"),
+    );
+
+    renderPage();
+
+    // Switch to snap-to-road mode first
+    fireEvent.click(screen.getByText("Snap to road"));
+
+    // Click the map twice to add 2 waypoints (triggers fetchRoute)
+    const map = screen.getByTestId("map");
+    fireEvent.click(map);
+    fireEvent.click(map);
+
+    // The error message should appear
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Routing service unavailable (http://localhost:8002). Is Valhalla running?",
+        ),
+      ).toBeInTheDocument();
+    });
   });
 });
