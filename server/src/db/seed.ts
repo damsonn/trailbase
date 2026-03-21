@@ -59,6 +59,15 @@ async function seed() {
     ON CONFLICT (id) DO NOTHING
   `;
 
+  // Clean existing waypoints before re-seeding (waypoint IDs are auto-generated,
+  // so ON CONFLICT doesn't prevent duplicates on repeated seed runs)
+  await sql`
+    DELETE FROM waypoints WHERE route_id IN (
+      'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
+      'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33'
+    )
+  `;
+
   // Waypoints for the route
   await sql`
     INSERT INTO waypoints (route_id, position, elevation_m, sort_order, name, type)
@@ -66,7 +75,6 @@ async function seed() {
       ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', ST_GeogFromText('POINT(151.2108 -33.8523)'), 5, 0, 'Harbour Bridge', 'stop'),
       ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', ST_GeogFromText('POINT(151.2231 -33.8688)'), 25, 1, 'Hyde Park', 'via'),
       ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', ST_GeogFromText('POINT(151.2741 -33.8915)'), 10, 2, 'Bondi Beach', 'stop')
-    ON CONFLICT (id) DO NOTHING
   `;
 
   // Blue Mountains hike
@@ -94,7 +102,6 @@ async function seed() {
       ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', ST_GeogFromText('POINT(150.3124 -33.7320)'), 920, 0, 'Echo Point', 'stop'),
       ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', ST_GeogFromText('POINT(150.3156 -33.7310)'), 750, 1, 'Giant Stairway', 'poi'),
       ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', ST_GeogFromText('POINT(150.3124 -33.7320)'), 920, 2, 'Echo Point', 'stop')
-    ON CONFLICT (id) DO NOTHING
   `;
 
   console.log("Seed complete: 1 user, 2 routes, 6 waypoints");

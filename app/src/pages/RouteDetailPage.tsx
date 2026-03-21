@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { Source, Layer, Marker } from "react-map-gl/maplibre";
 import {
   fetchRoute,
   updateRoute,
@@ -7,6 +8,7 @@ import {
   type RouteDetail,
   ApiError,
 } from "../lib/api.js";
+import { BaseMap, type MapViewState } from "../components/map/BaseMap.js";
 
 const ACTIVITY_LABELS: Record<string, string> = {
   bike: "Bike",
@@ -22,6 +24,40 @@ function formatDistance(m: number | null): string {
 function formatElevation(m: number | null): string {
   if (m == null) return "-";
   return `${Math.round(m)} m`;
+}
+
+/**
+ * Compute a map view state that fits all given points with padding.
+ * Exported for testing.
+ */
+export function computeBoundsView(
+  points: { lat: number; lng: number }[],
+): MapViewState {
+  const lats = points.map((p) => p.lat);
+  const lngs = points.map((p) => p.lng);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+
+  // Add padding: at least 3x the span or a minimum of 0.01° so small
+  // routes don't end up zoomed in too far and clipping markers.
+  const rawLatSpan = maxLat - minLat;
+  const rawLngSpan = maxLng - minLng;
+  const latSpan = Math.max(rawLatSpan * 3, 0.01);
+  const lngSpan = Math.max(rawLngSpan * 3, 0.01);
+
+  // Use the larger span to compute zoom. The formula maps degrees-per-tile
+  // at zoom 0 (360° for lng, 180° for lat) to the span we need to show.
+  const zoomLng = Math.log2(360 / lngSpan);
+  const zoomLat = Math.log2(180 / latSpan);
+  const zoom = Math.max(1, Math.min(16, Math.floor(Math.min(zoomLng, zoomLat))));
+
+  return {
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLng + maxLng) / 2,
+    zoom,
+  };
 }
 
 export function RouteDetailPage() {
@@ -43,6 +79,38 @@ export function RouteDetailPage() {
   // Delete state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Map state
+  const [mapViewState, setMapViewState] = useState<MapViewState | null>(null);
+
+  const initialMapView = useMemo<MapViewState | null>(() => {
+    if (!route || route.waypoints.length === 0) return null;
+    return computeBoundsView(
+      route.waypoints.map((wp) => wp.position),
+    );
+  }, [route]);
+
+  // Set map view when route loads
+  useEffect(() => {
+    if (initialMapView && !mapViewState) {
+      setMapViewState(initialMapView);
+    }
+  }, [initialMapView, mapViewState]);
+
+  const routeGeoJSON = useMemo(() => {
+    if (!route || route.waypoints.length < 2) return null;
+    return {
+      type: "Feature" as const,
+      properties: {},
+      geometry: {
+        type: "LineString" as const,
+        coordinates: route.waypoints.map((wp) => [
+          wp.position.lng,
+          wp.position.lat,
+        ]),
+      },
+    };
+  }, [route]);
 
   const loadRoute = useCallback(async () => {
     if (!id) return;
@@ -215,6 +283,46 @@ export function RouteDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Map */}
+      {mapViewState && route.waypoints.length > 0 && (
+        <div className="mb-8 h-[60vh] w-full overflow-hidden rounded-button border border-neutral-200">
+          <BaseMap
+            viewState={mapViewState}
+            onMove={setMapViewState}
+            cursor="grab"
+          >
+            {/* Waypoint markers */}
+            {route.waypoints.map((wp, idx) => (
+              <Marker
+                key={wp.id}
+                longitude={wp.position.lng}
+                latitude={wp.position.lat}
+                anchor="center"
+              >
+                <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-primary text-xs font-bold text-white shadow">
+                  {idx + 1}
+                </div>
+              </Marker>
+            ))}
+
+            {/* Route line */}
+            {routeGeoJSON && (
+              <Source id="route-line" type="geojson" data={routeGeoJSON}>
+                <Layer
+                  id="route-line-layer"
+                  type="line"
+                  paint={{
+                    "line-color": "#2563eb",
+                    "line-width": 3,
+                    "line-opacity": 0.8,
+                  }}
+                />
+              </Source>
+            )}
+          </BaseMap>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="mb-8 grid grid-cols-3 gap-4">

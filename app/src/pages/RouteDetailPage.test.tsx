@@ -1,13 +1,39 @@
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { RouteDetailPage } from "./RouteDetailPage.js";
+import { RouteDetailPage, computeBoundsView } from "./RouteDetailPage.js";
 
 // Mock auth
 vi.mock("../lib/auth-client.js", () => ({
   useSession: () => ({ data: { user: { email: "test@test.com" } }, isPending: false }),
   signOut: vi.fn(),
 }));
+
+// Mock react-map-gl/maplibre — avoid WebGL in tests
+vi.mock("react-map-gl/maplibre", async () => {
+  const { default: React } = await import("react");
+  return {
+    __esModule: true,
+    default: React.forwardRef(function MockMap(
+      props: { children?: React.ReactNode },
+      ref: React.Ref<unknown>,
+    ) {
+      return React.createElement(
+        "div",
+        { "data-testid": "map", ref },
+        props.children,
+      );
+    }),
+    Source: ({ children }: { children?: React.ReactNode }) =>
+      React.createElement("div", { "data-testid": "map-source" }, children),
+    Layer: () => React.createElement("div", { "data-testid": "map-layer" }),
+    Marker: ({ children }: { children?: React.ReactNode }) =>
+      React.createElement("div", { "data-testid": "map-marker" }, children),
+    NavigationControl: () => null,
+    ScaleControl: () => null,
+  };
+});
 
 // Mock API
 const mockFetchRoute = vi.fn();
@@ -141,6 +167,31 @@ describe("RouteDetailPage", () => {
     expect(screen.getByText(/This will permanently remove/)).toBeInTheDocument();
   });
 
+  it("renders map with markers and route line", async () => {
+    mockFetchRoute.mockResolvedValue({ data: MOCK_ROUTE });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByTestId("map")).toBeInTheDocument();
+    });
+    const markers = screen.getAllByTestId("map-marker");
+    expect(markers).toHaveLength(2);
+    expect(markers[0]).toHaveTextContent("1");
+    expect(markers[1]).toHaveTextContent("2");
+    expect(screen.getByTestId("map-source")).toBeInTheDocument();
+    expect(screen.getByTestId("map-layer")).toBeInTheDocument();
+  });
+
+  it("does not render map when route has no waypoints", async () => {
+    mockFetchRoute.mockResolvedValue({
+      data: { ...MOCK_ROUTE, waypoints: [] },
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Test Route" })).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("map")).not.toBeInTheDocument();
+  });
+
   it("has breadcrumb navigation", async () => {
     mockFetchRoute.mockResolvedValue({ data: MOCK_ROUTE });
     renderPage();
@@ -148,5 +199,47 @@ describe("RouteDetailPage", () => {
       const breadcrumbLinks = screen.getAllByRole("link", { name: "Routes" });
       expect(breadcrumbLinks.some((el) => el.getAttribute("href") === "/routes")).toBe(true);
     });
+  });
+});
+
+describe("computeBoundsView", () => {
+  it("centers on the midpoint of all waypoints", () => {
+    const view = computeBoundsView([
+      { lat: -33.85, lng: 151.21 },
+      { lat: -33.89, lng: 151.27 },
+    ]);
+    expect(view.latitude).toBeCloseTo(-33.87, 4);
+    expect(view.longitude).toBeCloseTo(151.24, 4);
+  });
+
+  it("produces a zoom that fits a small route (Three Sisters seed data)", () => {
+    // Three Sisters waypoints span ~0.005° — zoom must not exceed 14
+    // to ensure all markers are visible with padding
+    const view = computeBoundsView([
+      { lat: -33.7320, lng: 150.3124 },
+      { lat: -33.7310, lng: 150.3156 },
+      { lat: -33.7320, lng: 150.3124 },
+    ]);
+    expect(view.zoom).toBeLessThanOrEqual(14);
+    expect(view.zoom).toBeGreaterThanOrEqual(8);
+  });
+
+  it("produces reasonable zoom for a city-scale route", () => {
+    // Sydney Harbour Bridge to Bondi Beach (~5km)
+    const view = computeBoundsView([
+      { lat: -33.8523, lng: 151.2108 },
+      { lat: -33.8688, lng: 151.2231 },
+      { lat: -33.8915, lng: 151.2741 },
+    ]);
+    expect(view.zoom).toBeLessThanOrEqual(14);
+    expect(view.zoom).toBeGreaterThanOrEqual(10);
+  });
+
+  it("handles a single point without crashing", () => {
+    const view = computeBoundsView([{ lat: -33.85, lng: 151.21 }]);
+    expect(view.latitude).toBeCloseTo(-33.85, 4);
+    expect(view.longitude).toBeCloseTo(151.21, 4);
+    expect(view.zoom).toBeGreaterThanOrEqual(1);
+    expect(view.zoom).toBeLessThanOrEqual(16);
   });
 });
