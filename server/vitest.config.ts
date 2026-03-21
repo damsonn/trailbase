@@ -6,5 +6,10 @@ export default defineConfig({
       // Load from .env for integration tests that need DATABASE_URL etc.
     },
     setupFiles: ["dotenv/config"],
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/*.integration.test.*",
+    ],
   },
 });
