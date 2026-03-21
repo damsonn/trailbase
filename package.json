@@ -12,6 +12,8 @@
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test:e2e": "playwright test",
+    "test:e2e:update": "playwright test --update-snapshots",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
     "docker:reset": "docker compose down -v"
@@ -23,6 +25,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.58.2",
     "eslint": "^10.0.2",
     "prettier": "^3.8.1",
     "typescript-eslint": "^8.56.1"
