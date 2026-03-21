@@ -32,7 +32,7 @@ export function LoginPage() {
   return (
     <div className="mx-auto max-w-sm px-6 py-16">
       <div className="mb-8 flex flex-col items-center gap-3">
-        <img src="/logo-icon.png" alt="Trail base" className="h-16 w-16" />
+        <img src="/logo-icon.svg" alt="Trail base" className="h-16 w-16" />
         <h1 className="text-2xl font-bold text-neutral-900">Log in</h1>
       </div>
 
