@@ -20,7 +20,7 @@ services:
     ports:
       - "8002:8002"
     volumes:
-      - valhalla-tiles:/custom_files
+      - ./valhalla-data:/custom_files
     environment:
       tile_urls: https://download.geofabrik.de/australia-oceania/australia-latest.osm.pbf
       serve_tiles: "True"
@@ -78,4 +78,3 @@ services:
 
 volumes:
   pgdata:
-  valhalla-tiles:
