@@ -23,7 +23,7 @@ export function computeBoundsView(
   // at zoom 0 (360° for lng, 180° for lat) to the span we need to show.
   const zoomLng = Math.log2(360 / lngSpan);
   const zoomLat = Math.log2(180 / latSpan);
-  const zoom = Math.max(1, Math.min(18, Math.min(zoomLng, zoomLat) + 1));
+  const zoom = Math.max(1, Math.min(18, Math.min(zoomLng, zoomLat) + 0.8));
 
   return {
     latitude: (minLat + maxLat) / 2,
