@@ -21,7 +21,7 @@ app.get("/api/health", (c) => {
 });
 
 // Mount Better-Auth handler
-app.on(["POST", "GET"], "/api/auth/**", (c) => {
+app.on(["POST", "GET"], "/api/auth/*", (c) => {
   return auth.handler(c.req.raw);
 });
 
