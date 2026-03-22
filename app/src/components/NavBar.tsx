@@ -9,7 +9,7 @@ export function NavBar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <img src="/logo-icon.svg" alt="" className="h-8 w-8" />
-          <span className="text-xl font-bold text-primary">Trail base</span>
+          <span className="text-[1.375rem] font-bold text-primary">Trail base</span>
         </Link>
 
         <nav className="flex items-center gap-4">
