@@ -1,4 +1,7 @@
 import "dotenv/config";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import postgres from "postgres";
 
 const databaseUrl = process.env["DATABASE_URL"];
@@ -7,6 +10,15 @@ if (!databaseUrl) {
 }
 
 const sql = postgres(databaseUrl);
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function loadSeedGeometry(filename: string): { wkt: string; distanceM: number } {
+  const data = JSON.parse(readFileSync(join(__dirname, filename), "utf-8"));
+  const coords: number[][] = data.geometry.coordinates;
+  const wkt = `LINESTRING(${coords.map((c) => `${c[0]} ${c[1]}`).join(", ")})`;
+  return { wkt, distanceM: data.distanceM };
+}
 
 async function seed() {
   console.log("Seeding database...");
@@ -40,7 +52,8 @@ async function seed() {
     ON CONFLICT (id) DO UPDATE SET password = EXCLUDED.password
   `;
 
-  // Sydney Harbour Bridge to Bondi Beach route
+  // Sydney Harbour Bridge to Bondi Beach route (real routed geometry from Valhalla)
+  const harbourBridge = loadSeedGeometry("seed-harbour-bridge-to-bondi.json");
   await sql`
     INSERT INTO routes (id, user_id, name, description, activity_type, geometry, distance_m, elevation_gain_m, elevation_loss_m, source_format, metadata)
     VALUES (
@@ -49,14 +62,16 @@ async function seed() {
       'Harbour Bridge to Bondi',
       'A scenic ride from the Sydney Harbour Bridge through the city to Bondi Beach.',
       'bike',
-      ST_GeogFromText('LINESTRING(151.2108 -33.8523, 151.2153 -33.8569, 151.2231 -33.8688, 151.2340 -33.8778, 151.2506 -33.8832, 151.2741 -33.8915)'),
-      8500,
+      ST_GeogFromText(${harbourBridge.wkt}),
+      ${harbourBridge.distanceM},
       120,
       95,
       'manual',
       '{"tags": ["coastal", "scenic"]}'::jsonb
     )
-    ON CONFLICT (id) DO NOTHING
+    ON CONFLICT (id) DO UPDATE SET
+      geometry = ST_GeogFromText(${harbourBridge.wkt}),
+      distance_m = ${harbourBridge.distanceM}
   `;
 
   // Clean existing waypoints before re-seeding (waypoint IDs are auto-generated,
@@ -77,7 +92,8 @@ async function seed() {
       ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', ST_GeogFromText('POINT(151.2741 -33.8915)'), 10, 2, 'Bondi Beach', 'stop')
   `;
 
-  // Blue Mountains hike
+  // Blue Mountains hike (real routed geometry from Valhalla)
+  const threeSisters = loadSeedGeometry("seed-three-sisters-loop.json");
   await sql`
     INSERT INTO routes (id, user_id, name, description, activity_type, geometry, distance_m, elevation_gain_m, elevation_loss_m, source_format, metadata)
     VALUES (
@@ -86,14 +102,16 @@ async function seed() {
       'Three Sisters Loop',
       'Classic Blue Mountains walk with views of the Three Sisters rock formation.',
       'hike',
-      ST_GeogFromText('LINESTRING(150.3124 -33.7320, 150.3140 -33.7335, 150.3156 -33.7310, 150.3170 -33.7325, 150.3124 -33.7320)'),
-      3200,
+      ST_GeogFromText(${threeSisters.wkt}),
+      ${threeSisters.distanceM},
       280,
       280,
       'manual',
       '{"tags": ["mountains", "loop", "views"]}'::jsonb
     )
-    ON CONFLICT (id) DO NOTHING
+    ON CONFLICT (id) DO UPDATE SET
+      geometry = ST_GeogFromText(${threeSisters.wkt}),
+      distance_m = ${threeSisters.distanceM}
   `;
 
   await sql`
