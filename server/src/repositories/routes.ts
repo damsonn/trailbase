@@ -306,6 +306,32 @@ export class RouteRepository {
     return rows[0] ?? null;
   }
 
+  async updateGeometryAndElevation(
+    id: string,
+    userId: string,
+    geometry: { type: string; coordinates: number[][] },
+    gainM: number,
+    lossM: number,
+  ): Promise<RouteRow | null> {
+    const wkt = buildLineStringWKT(geometry.coordinates);
+    const result = await this.db.execute(sql`
+      UPDATE routes
+      SET geometry = ST_GeogFromText(${wkt}),
+          elevation_gain_m = ${gainM}, elevation_loss_m = ${lossM},
+          updated_at = NOW(), version = version + 1
+      WHERE id = ${id} AND user_id = ${userId} AND deleted_at IS NULL
+      RETURNING
+        id, user_id as "userId", name, description,
+        activity_type as "activityType",
+        ST_AsGeoJSON(geometry::geometry) as "geometryJson",
+        distance_m as "distanceM", elevation_gain_m as "elevationGainM",
+        elevation_loss_m as "elevationLossM", metadata, source_format as "sourceFormat",
+        deleted_at as "deletedAt", version, created_at as "createdAt", updated_at as "updatedAt"
+    `);
+    const rows = Array.from(result) as unknown as RouteRow[];
+    return rows[0] ?? null;
+  }
+
   async softDelete(id: string, userId: string): Promise<boolean> {
     const [row] = await this.db
       .update(routes)

@@ -14,6 +14,7 @@ import {
   elevationStats,
 } from "@trailbase/shared";
 import type { ApiErrorResponse } from "@trailbase/shared";
+import { ValhallaElevationAdapter } from "../adapters/elevation/index.js";
 
 type AuthEnv = {
   Variables: {
@@ -268,6 +269,8 @@ routeRoutes.post("/import", async (c) => {
 
 // ── POST /api/routes/:id/recalculate-elevation ──────────────────────────────
 
+const recalcElevationAdapter = new ValhallaElevationAdapter();
+
 routeRoutes.post("/:id/recalculate-elevation", async (c) => {
   const user = c.get("user");
   const id = c.req.param("id");
@@ -290,23 +293,28 @@ routeRoutes.post("/:id/recalculate-elevation", async (c) => {
   const geometry = JSON.parse(route.geometryJson);
   const coords: number[][] = geometry.coordinates;
 
-  // Extract Z (elevation) from 3D coordinates
-  const elevations = coords
-    .filter((c) => c.length >= 3)
-    .map((c) => c[2]!);
+  // Re-fetch elevation from Valhalla/Open-Meteo for all coordinates
+  const coords2D: [number, number][] = coords.map((c) => [c[0]!, c[1]!]);
+  const freshElevations = await recalcElevationAdapter.getElevations(coords2D);
 
-  if (elevations.length < 2) {
+  const hasData = freshElevations.some((e) => e !== null);
+  if (!hasData) {
     return c.json(
-      validationError("Route geometry has no elevation data (Z coordinates)"),
-      400,
+      validationError("Could not fetch elevation data from any provider"),
+      502,
     );
   }
 
+  // Build updated 3D coordinates and compute stats
+  const updatedCoords = coords2D.map(([lng, lat], i) => [lng, lat, freshElevations[i] ?? 0]);
+  const elevations = updatedCoords.map((c) => c[2]!);
   const stats = elevationStats(elevations);
   const gainM = Math.round(stats.gain);
   const lossM = Math.round(stats.loss);
 
-  const updated = await repo.updateElevation(id, user.id, gainM, lossM);
+  // Update geometry with new Z values + elevation stats
+  const updatedGeometry = { type: "LineString", coordinates: updatedCoords };
+  const updated = await repo.updateGeometryAndElevation(id, user.id, updatedGeometry, gainM, lossM);
 
   return c.json({
     data: {

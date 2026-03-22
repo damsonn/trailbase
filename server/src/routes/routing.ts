@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { requireAuth } from "../middleware/auth.js";
 import { directionsRequestSchema } from "@trailbase/shared";
 import { ValhallaAdapter, calculateElevation } from "../adapters/routing/valhalla-adapter.js";
-import { OpenMeteoAdapter, ValhallaElevationAdapter, FallbackElevationAdapter } from "../adapters/elevation/index.js";
+import { ValhallaElevationAdapter } from "../adapters/elevation/index.js";
 import type { ElevationProvider } from "../adapters/elevation/index.js";
 import type { ApiErrorResponse } from "@trailbase/shared";
 
@@ -18,10 +18,7 @@ const routingRoutes = new Hono<AuthEnv>();
 routingRoutes.use("*", requireAuth);
 
 const routingAdapter = new ValhallaAdapter();
-const elevationAdapter: ElevationProvider = new FallbackElevationAdapter([
-  new ValhallaElevationAdapter(),
-  new OpenMeteoAdapter(),
-]);
+const elevationAdapter: ElevationProvider = new ValhallaElevationAdapter();
 
 // ── POST /api/routing/directions ────────────────────────────────────────────
 
