@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { RouteBuilderPage } from "./RouteBuilderPage.js";
-import { fetchDirections } from "../lib/api.js";
+import { createRoute, fetchDirections } from "../lib/api.js";
 
 // Mock auth
 vi.mock("../lib/auth-client.js", () => ({
@@ -138,5 +138,92 @@ describe("RouteBuilderPage", () => {
         ),
       ).toBeInTheDocument();
     });
+  });
+
+  it("sends geometry when saving in snap-to-road mode", async () => {
+    const mockGeometry = {
+      type: "LineString" as const,
+      coordinates: [
+        [151.21, -33.85],
+        [151.23, -33.87],
+        [151.27, -33.89],
+      ],
+    };
+    const mockRouteResult = {
+      geometry: mockGeometry,
+      distanceM: 5432,
+      elevationGainM: 120,
+      elevationLossM: 95,
+      segments: [],
+    };
+
+    const mockFetchDirections = vi.mocked(fetchDirections);
+    mockFetchDirections.mockResolvedValue({ data: mockRouteResult });
+
+    const mockCreateRoute = vi.mocked(createRoute);
+    mockCreateRoute.mockResolvedValue({ data: { id: "new-route-id" } as never });
+
+    renderPage();
+
+    // Switch to snap-to-road mode
+    fireEvent.click(screen.getByText("Snap to road"));
+
+    // Add waypoints
+    const map = screen.getByTestId("map");
+    fireEvent.click(map);
+    fireEvent.click(map);
+
+    // Wait for routing to complete
+    await waitFor(() => {
+      expect(mockFetchDirections).toHaveBeenCalled();
+    });
+
+    // Fill in name
+    fireEvent.change(screen.getByPlaceholderText("My route"), {
+      target: { value: "Test Route" },
+    });
+
+    // Save
+    fireEvent.click(screen.getByText("Save Route"));
+
+    await waitFor(() => {
+      expect(mockCreateRoute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Test Route",
+          geometry: mockGeometry,
+          distanceM: 5432,
+          elevationGainM: 120,
+          elevationLossM: 95,
+        }),
+      );
+    });
+  });
+
+  it("does not send geometry when saving in point-to-point mode", async () => {
+    const mockCreateRoute = vi.mocked(createRoute);
+    mockCreateRoute.mockResolvedValue({ data: { id: "new-route-id" } as never });
+
+    renderPage();
+
+    // Add waypoints (default is point-to-point)
+    const map = screen.getByTestId("map");
+    fireEvent.click(map);
+    fireEvent.click(map);
+
+    // Fill in name
+    fireEvent.change(screen.getByPlaceholderText("My route"), {
+      target: { value: "Simple Route" },
+    });
+
+    // Save
+    fireEvent.click(screen.getByText("Save Route"));
+
+    await waitFor(() => {
+      expect(mockCreateRoute).toHaveBeenCalled();
+    });
+
+    const callArg = mockCreateRoute.mock.calls[0]![0];
+    expect(callArg.geometry).toBeUndefined();
+    expect(callArg.distanceM).toBeUndefined();
   });
 });

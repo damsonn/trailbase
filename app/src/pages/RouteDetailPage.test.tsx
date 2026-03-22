@@ -60,6 +60,7 @@ const MOCK_ROUTE = {
   name: "Test Route",
   description: "A test route",
   activityType: "bike",
+  geometry: null as { type: "LineString"; coordinates: number[][] } | null,
   distanceM: 5000,
   elevationGainM: 100,
   elevationLossM: 80,
@@ -199,6 +200,40 @@ describe("RouteDetailPage", () => {
       const breadcrumbLinks = screen.getAllByRole("link", { name: "Routes" });
       expect(breadcrumbLinks.some((el) => el.getAttribute("href") === "/routes")).toBe(true);
     });
+  });
+
+  it("renders stored geometry when available", async () => {
+    const routeWithGeometry = {
+      ...MOCK_ROUTE,
+      geometry: {
+        type: "LineString" as const,
+        coordinates: [
+          [151.21, -33.85],
+          [151.23, -33.87],
+          [151.25, -33.88],
+          [151.27, -33.89],
+        ],
+      },
+    };
+    mockFetchRoute.mockResolvedValue({ data: routeWithGeometry });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByTestId("map")).toBeInTheDocument();
+    });
+    // Map source should be rendered (uses stored geometry, not waypoint straight lines)
+    expect(screen.getByTestId("map-source")).toBeInTheDocument();
+    expect(screen.getByTestId("map-layer")).toBeInTheDocument();
+  });
+
+  it("falls back to waypoint straight lines when no stored geometry", async () => {
+    mockFetchRoute.mockResolvedValue({ data: { ...MOCK_ROUTE, geometry: null } });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByTestId("map")).toBeInTheDocument();
+    });
+    // Should still render route line from waypoints
+    expect(screen.getByTestId("map-source")).toBeInTheDocument();
+    expect(screen.getByTestId("map-layer")).toBeInTheDocument();
   });
 });
 

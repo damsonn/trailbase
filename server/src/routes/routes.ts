@@ -29,8 +29,10 @@ function validationError(message: string, details?: unknown): ApiErrorResponse {
 }
 
 function formatRoute(row: RouteRow) {
+  const { geometryJson, ...rest } = row;
   return {
-    ...row,
+    ...rest,
+    geometry: geometryJson ? JSON.parse(geometryJson) : null,
     distanceM: row.distanceM != null ? Number(row.distanceM) : null,
     elevationGainM: row.elevationGainM != null ? Number(row.elevationGainM) : null,
     elevationLossM: row.elevationLossM != null ? Number(row.elevationLossM) : null,

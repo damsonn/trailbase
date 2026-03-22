@@ -16,6 +16,7 @@ export interface RouteRow {
   name: string;
   description: string | null;
   activityType: "bike" | "hike" | "car";
+  geometryJson: string | null;
   distanceM: string | null;
   elevationGainM: string | null;
   elevationLossM: string | null;
@@ -99,17 +100,29 @@ export class RouteRepository {
     ]);
 
     return {
-      rows: rows as RouteRow[],
+      rows: (rows as Array<Record<string, unknown>>).map((r) => ({ ...r, geometryJson: null })) as RouteRow[],
       total: countResult[0]?.count ?? 0,
     };
   }
 
   async findById(id: string, userId: string): Promise<RouteWithWaypointRows | null> {
-    const [route] = await this.db
-      .select()
-      .from(routes)
-      .where(and(eq(routes.id, id), eq(routes.userId, userId), isNull(routes.deletedAt)));
+    const routeRows = await this.db.execute(sql`
+      SELECT
+        id, user_id as "userId", name, description,
+        activity_type as "activityType",
+        ST_AsGeoJSON(geometry::geometry) as "geometryJson",
+        distance_m as "distanceM",
+        elevation_gain_m as "elevationGainM",
+        elevation_loss_m as "elevationLossM",
+        metadata, source_format as "sourceFormat",
+        deleted_at as "deletedAt", version,
+        created_at as "createdAt", updated_at as "updatedAt"
+      FROM routes
+      WHERE id = ${id} AND user_id = ${userId} AND deleted_at IS NULL
+    `);
 
+    const rows = Array.from(routeRows) as unknown as RouteRow[];
+    const route = rows[0];
     if (!route) return null;
 
     // Fetch waypoints with position extracted via raw SQL
@@ -127,7 +140,7 @@ export class RouteRepository {
     `);
 
     return {
-      ...(route as RouteRow),
+      ...route,
       waypoints: Array.from(wps) as unknown as WaypointRow[],
     };
   }
@@ -136,6 +149,27 @@ export class RouteRepository {
     userId: string,
     input: CreateRouteInput,
   ): Promise<RouteRow> {
+    if (input.geometry) {
+      // Use raw SQL for PostGIS geometry insertion
+      const wkt = `LINESTRING(${input.geometry.coordinates.map((c) => `${c[0]} ${c[1]}`).join(", ")})`;
+      const rows = await this.db.execute(sql`
+        INSERT INTO routes (user_id, name, description, activity_type, geometry, distance_m, elevation_gain_m, elevation_loss_m, source_format)
+        VALUES (
+          ${userId}, ${input.name}, ${input.description ?? null}, ${input.activityType},
+          ST_GeogFromText(${wkt}),
+          ${input.distanceM ?? null}, ${input.elevationGainM ?? null}, ${input.elevationLossM ?? null},
+          'manual'
+        )
+        RETURNING id, user_id as "userId", name, description,
+          activity_type as "activityType",
+          ST_AsGeoJSON(geometry::geometry) as "geometryJson",
+          distance_m as "distanceM", elevation_gain_m as "elevationGainM",
+          elevation_loss_m as "elevationLossM", metadata, source_format as "sourceFormat",
+          deleted_at as "deletedAt", version, created_at as "createdAt", updated_at as "updatedAt"
+      `);
+      return (Array.from(rows) as unknown as RouteRow[])[0]!;
+    }
+
     const [row] = await this.db
       .insert(routes)
       .values({
@@ -143,11 +177,14 @@ export class RouteRepository {
         name: input.name,
         description: input.description ?? null,
         activityType: input.activityType,
+        distanceM: input.distanceM?.toString() ?? null,
+        elevationGainM: input.elevationGainM?.toString() ?? null,
+        elevationLossM: input.elevationLossM?.toString() ?? null,
         sourceFormat: "manual",
       })
       .returning();
 
-    return row as RouteRow;
+    return { ...(row as unknown as RouteRow), geometryJson: null };
   }
 
   async createWaypoints(routeId: string, coords: Coordinate[]): Promise<void> {
@@ -177,6 +214,9 @@ export class RouteRepository {
     if (input.name !== undefined) setClauses["name"] = input.name;
     if (input.description !== undefined) setClauses["description"] = input.description;
     if (input.activityType !== undefined) setClauses["activityType"] = input.activityType;
+    if (input.distanceM !== undefined) setClauses["distanceM"] = input.distanceM?.toString() ?? null;
+    if (input.elevationGainM !== undefined) setClauses["elevationGainM"] = input.elevationGainM?.toString() ?? null;
+    if (input.elevationLossM !== undefined) setClauses["elevationLossM"] = input.elevationLossM?.toString() ?? null;
 
     const [row] = await this.db
       .update(routes)
@@ -191,7 +231,30 @@ export class RouteRepository {
       )
       .returning();
 
-    return (row as RouteRow) ?? null;
+    if (!row) return null;
+
+    // Update geometry separately via raw SQL if provided
+    if (input.geometry !== undefined) {
+      if (input.geometry) {
+        const wkt = `LINESTRING(${input.geometry.coordinates.map((c) => `${c[0]} ${c[1]}`).join(", ")})`;
+        await this.db.execute(sql`UPDATE routes SET geometry = ST_GeogFromText(${wkt}) WHERE id = ${id}`);
+      } else {
+        await this.db.execute(sql`UPDATE routes SET geometry = NULL WHERE id = ${id}`);
+      }
+    }
+
+    // Re-fetch to get geometryJson
+    const result = await this.db.execute(sql`
+      SELECT
+        id, user_id as "userId", name, description,
+        activity_type as "activityType",
+        ST_AsGeoJSON(geometry::geometry) as "geometryJson",
+        distance_m as "distanceM", elevation_gain_m as "elevationGainM",
+        elevation_loss_m as "elevationLossM", metadata, source_format as "sourceFormat",
+        deleted_at as "deletedAt", version, created_at as "createdAt", updated_at as "updatedAt"
+      FROM routes WHERE id = ${id}
+    `);
+    return (Array.from(result) as unknown as RouteRow[])[0] ?? null;
   }
 
   async softDelete(id: string, userId: string): Promise<boolean> {

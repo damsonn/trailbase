@@ -67,6 +67,10 @@ export async function createRoute(input: {
   description?: string;
   activityType: string;
   waypoints: { lat: number; lng: number }[];
+  geometry?: { type: "LineString"; coordinates: number[][] };
+  distanceM?: number;
+  elevationGainM?: number;
+  elevationLossM?: number;
 }) {
   return request<{ data: RouteItem }>("/routes", {
     method: "POST",
@@ -152,6 +156,7 @@ export interface WaypointItem {
 }
 
 export interface RouteDetail extends RouteItem {
+  geometry: { type: "LineString"; coordinates: number[][] } | null;
   waypoints: WaypointItem[];
 }
 

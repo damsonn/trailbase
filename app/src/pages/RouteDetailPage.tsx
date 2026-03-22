@@ -88,7 +88,19 @@ export function RouteDetailPage() {
   }, [route]);
 
   const routeGeoJSON = useMemo(() => {
-    if (!route || route.waypoints.length < 2) return null;
+    if (!route) return null;
+
+    // Prefer stored geometry from routing engine if available
+    if (route.geometry) {
+      return {
+        type: "Feature" as const,
+        properties: {},
+        geometry: route.geometry,
+      };
+    }
+
+    // Fallback: straight lines between waypoints
+    if (route.waypoints.length < 2) return null;
     return {
       type: "Feature" as const,
       properties: {},

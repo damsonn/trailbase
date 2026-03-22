@@ -106,6 +106,76 @@ describe("route validation schemas", () => {
       });
       expect(result.success).toBe(false);
     });
+
+    it("accepts valid input with geometry", () => {
+      const result = createRouteSchema.safeParse({
+        name: "Routed Path",
+        activityType: "hike",
+        waypoints: [
+          { lat: -33.85, lng: 151.21 },
+          { lat: -33.89, lng: 151.27 },
+        ],
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [151.21, -33.85],
+            [151.23, -33.87],
+            [151.27, -33.89],
+          ],
+        },
+        distanceM: 5432.1,
+        elevationGainM: 120,
+        elevationLossM: 95,
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("accepts valid input without geometry", () => {
+      const result = createRouteSchema.safeParse({
+        name: "Simple Route",
+        activityType: "bike",
+        waypoints: [
+          { lat: 0, lng: 0 },
+          { lat: 1, lng: 1 },
+        ],
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.geometry).toBeUndefined();
+      }
+    });
+
+    it("rejects invalid geometry type", () => {
+      const result = createRouteSchema.safeParse({
+        name: "Route",
+        activityType: "bike",
+        waypoints: [
+          { lat: 0, lng: 0 },
+          { lat: 1, lng: 1 },
+        ],
+        geometry: {
+          type: "Point",
+          coordinates: [0, 0],
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects geometry with fewer than 2 coordinates", () => {
+      const result = createRouteSchema.safeParse({
+        name: "Route",
+        activityType: "bike",
+        waypoints: [
+          { lat: 0, lng: 0 },
+          { lat: 1, lng: 1 },
+        ],
+        geometry: {
+          type: "LineString",
+          coordinates: [[0, 0]],
+        },
+      });
+      expect(result.success).toBe(false);
+    });
   });
 
   describe("updateRouteSchema", () => {

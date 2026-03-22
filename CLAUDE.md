@@ -23,6 +23,7 @@
 - **Server**: Unit tests for route handlers (use `app.request()` from Hono), validation edge cases, middleware behavior
 - **App**: Component render tests with React Testing Library, auth state variations, form rendering, navigation links
 - **Shared**: Unit tests for utilities, parsers, schema validation
+- **E2E**: Playwright tests for main user flows — route CRUD, route builder, snap-to-road, GPX import
 
 ### Test patterns
 - **Server tests**: Import the Hono `app` and use `app.request()` — no real DB needed for handler-level tests
@@ -30,11 +31,19 @@
 - **Cleanup**: `afterEach(cleanup)` is configured in `app/src/test-setup.ts`
 - **Auth mocking**: Mock `"../lib/auth-client.js"` (or `"./lib/auth-client.js"` from `src/`) with a factory returning `{ useSession, signIn, signUp, signOut }`. Use `vi.fn()` for `useSession` to control return values per test
 
+### E2E test patterns
+- **Login helper**: `login(page)` — logs in with `demo@trailbase.app` / `password`
+- **Map waiting**: `waitForMap(page)` — waits for `.maplibregl-map` to be visible + 3s settle
+- **Map interactions**: Use `page.locator('.maplibregl-map').click({ position: { x, y } })` for waypoint placement
+- **Seed data**: E2E tests use seed routes (Three Sisters, Harbour Bridge to Bondi) with known UUIDs
+- **Cleanup**: Delete any routes created during tests to avoid polluting the database
+
 ### Quality gates (run before committing)
 ```bash
 pnpm lint        # No lint errors
 pnpm test        # All tests must pass
 pnpm typecheck   # No type errors
+pnpm test:e2e    # E2E tests pass (requires running servers + Valhalla via docker compose)
 ```
 
 ## Project Tracking (Two Layers)

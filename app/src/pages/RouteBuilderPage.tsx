@@ -268,6 +268,12 @@ export function RouteBuilderPage() {
         description: description.trim() || undefined,
         activityType,
         waypoints: waypoints.map((wp) => ({ lat: wp.lat, lng: wp.lng })),
+        ...(routeResult && {
+          geometry: routeResult.geometry,
+          distanceM: routeResult.distanceM,
+          elevationGainM: routeResult.elevationGainM,
+          elevationLossM: routeResult.elevationLossM,
+        }),
       });
       navigate(`/routes/${res.data.id}`);
     } catch (err) {
@@ -275,7 +281,7 @@ export function RouteBuilderPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [name, description, activityType, waypoints, navigate]);
+  }, [name, description, activityType, waypoints, routeResult, navigate]);
 
   const canSave = name.trim().length > 0 && waypoints.length >= 2 && !isSaving;
 
