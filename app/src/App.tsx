@@ -9,6 +9,7 @@ import { DashboardPage } from "./pages/DashboardPage.js";
 import { RoutesPage } from "./pages/RoutesPage.js";
 import { RouteDetailPage } from "./pages/RouteDetailPage.js";
 import { RouteBuilderPage } from "./pages/RouteBuilderPage.js";
+import { GpxUploadPage } from "./pages/GpxUploadPage.js";
 
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
@@ -38,6 +39,14 @@ function AppLayout() {
               element={
                 <ProtectedRoute>
                   <RoutesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/routes/import"
+              element={
+                <ProtectedRoute>
+                  <GpxUploadPage />
                 </ProtectedRoute>
               }
             />

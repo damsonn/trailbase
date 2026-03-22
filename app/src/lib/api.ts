@@ -104,6 +104,54 @@ export async function deleteRoute(id: string) {
   });
 }
 
+// ── GPX Import/Export ────────────────────────────────────────────────────────
+
+export async function importGpx(
+  file: File,
+  options?: { name?: string; activityType?: string },
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (options?.name) formData.append("name", options.name);
+  if (options?.activityType) formData.append("activityType", options.activityType);
+
+  const res = await fetch(`${API_BASE}/routes/import`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  const body = await res.json();
+
+  if (!res.ok) {
+    throw new ApiError(
+      body?.error?.message ?? res.statusText,
+      body?.error?.code ?? "UNKNOWN",
+      res.status,
+      body?.error?.details,
+    );
+  }
+
+  return body as { data: RouteItem };
+}
+
+export async function exportGpx(routeId: string): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/routes/${routeId}/export`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(
+      body?.error?.message ?? res.statusText,
+      body?.error?.code ?? "UNKNOWN",
+      res.status,
+    );
+  }
+
+  return res.blob();
+}
+
 // ── Routing API ─────────────────────────────────────────────────────────────
 
 export interface DirectionsParams {

@@ -4,6 +4,7 @@ import { Source, Layer, Marker } from "react-map-gl/maplibre";
 import {
   fetchRoute,
   deleteRoute,
+  exportGpx,
   type RouteDetail,
 } from "../lib/api.js";
 import { BaseMap, type MapViewState } from "../components/map/BaseMap.js";
@@ -137,6 +138,24 @@ export function RouteDetailPage() {
     }
   }
 
+  async function handleExport() {
+    if (!id || !route) return;
+    try {
+      const blob = await exportGpx(id);
+      const filename = route.name.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${filename}.gpx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to export GPX");
+    }
+  }
+
   if (loading) {
     return (
       <div className="mx-auto max-w-7xl px-6 py-8">
@@ -181,6 +200,12 @@ export function RouteDetailPage() {
         </div>
 
         <div className="flex gap-2">
+          <button
+            onClick={handleExport}
+            className="rounded-button border border-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-100"
+          >
+            Export GPX
+          </button>
           <Link
             to={`/routes/${id}/edit`}
             className="rounded-button border border-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-100"

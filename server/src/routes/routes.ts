@@ -6,6 +6,11 @@ import {
   updateRouteSchema,
   routeListQuerySchema,
   updateWaypointsSchema,
+  activityTypeSchema,
+  parseGpx,
+  gpxToRouteInput,
+  routeToGpx,
+  serializeGpx,
 } from "@trailbase/shared";
 import type { ApiErrorResponse } from "@trailbase/shared";
 
@@ -211,6 +216,87 @@ routeRoutes.put("/:id/waypoints", async (c) => {
   await repo.replaceWaypoints(id, coords);
 
   return c.json({ data: { routeId: id, count: coords.length } });
+});
+
+// ── POST /api/routes/import ──────────────────────────────────────────────────
+
+const MAX_GPX_SIZE = 10 * 1024 * 1024; // 10 MB
+
+routeRoutes.post("/import", async (c) => {
+  const user = c.get("user");
+
+  const body = await c.req.parseBody();
+  const file = body["file"];
+
+  if (!file || !(file instanceof File)) {
+    return c.json(validationError("No GPX file uploaded"), 400);
+  }
+
+  if (file.size > MAX_GPX_SIZE) {
+    return c.json(validationError("File exceeds 10 MB size limit"), 400);
+  }
+
+  const xml = await file.text();
+
+  let parsed;
+  try {
+    parsed = parseGpx(xml);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to parse GPX file";
+    return c.json(validationError(message), 400);
+  }
+
+  const nameOverride = typeof body["name"] === "string" ? body["name"] : undefined;
+  const activityRaw = typeof body["activityType"] === "string" ? body["activityType"] : undefined;
+  const activityResult = activityRaw ? activityTypeSchema.safeParse(activityRaw) : null;
+  const activityType = activityResult?.success ? activityResult.data : undefined;
+
+  let importResult;
+  try {
+    importResult = gpxToRouteInput(parsed, { name: nameOverride, activityType });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to convert GPX to route";
+    return c.json(validationError(message), 400);
+  }
+
+  const route = await repo.create(user.id, importResult.route, "gpx");
+  await repo.createWaypointsFromInput(route.id, importResult.waypoints);
+
+  return c.json({ data: formatRoute(route) }, 201);
+});
+
+// ── GET /api/routes/:id/export ──────────────────────────────────────────────
+
+routeRoutes.get("/:id/export", async (c) => {
+  const user = c.get("user");
+  const id = c.req.param("id");
+
+  const route = await repo.findById(id, user.id);
+  if (!route) {
+    return c.json(
+      { error: { code: "ROUTE_NOT_FOUND", message: "Route not found" } },
+      404,
+    );
+  }
+
+  const { waypoints: wps, ...routeData } = route;
+  const formatted = {
+    ...formatRoute(routeData),
+    waypoints: wps.map(formatWaypoint),
+  };
+
+  const gpxData = routeToGpx(formatted);
+  const xml = serializeGpx(gpxData);
+
+  const filename = formatted.name.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+
+  return new Response(xml, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/gpx+xml",
+      "Content-Disposition": `attachment; filename="${filename}.gpx"`,
+    },
+  });
 });
 
 export { routeRoutes };

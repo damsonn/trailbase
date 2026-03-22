@@ -6,6 +6,8 @@ import type {
   CreateRouteInput,
   UpdateRouteInput,
   Coordinate,
+  SourceFormat,
+  WaypointInput,
 } from "@trailbase/shared";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -158,6 +160,7 @@ export class RouteRepository {
   async create(
     userId: string,
     input: CreateRouteInput,
+    sourceFormat: SourceFormat = "manual",
   ): Promise<RouteRow> {
     if (input.geometry) {
       // Use raw SQL for PostGIS geometry insertion
@@ -168,7 +171,7 @@ export class RouteRepository {
           ${userId}, ${input.name}, ${input.description ?? null}, ${input.activityType},
           ST_GeogFromText(${wkt}),
           ${input.distanceM ?? null}, ${input.elevationGainM ?? null}, ${input.elevationLossM ?? null},
-          'manual'
+          ${sourceFormat}
         )
         RETURNING id, user_id as "userId", name, description,
           activity_type as "activityType",
@@ -190,7 +193,7 @@ export class RouteRepository {
         distanceM: input.distanceM?.toString() ?? null,
         elevationGainM: input.elevationGainM?.toString() ?? null,
         elevationLossM: input.elevationLossM?.toString() ?? null,
-        sourceFormat: "manual",
+        sourceFormat,
       })
       .returning();
 
@@ -208,6 +211,19 @@ export class RouteRepository {
 
     await this.db.execute(
       sql`INSERT INTO waypoints (route_id, position, sort_order, type) VALUES ${sql.join(values, sql`, `)}`,
+    );
+  }
+
+  async createWaypointsFromInput(routeId: string, inputs: WaypointInput[]): Promise<void> {
+    if (inputs.length === 0) return;
+
+    const values = inputs.map(
+      (w) =>
+        sql`(${routeId}, ST_GeogFromText(${`POINT(${w.position.lng} ${w.position.lat})`}), ${w.elevationM ?? null}, ${w.sortOrder}, ${w.name ?? null}, ${w.type})`,
+    );
+
+    await this.db.execute(
+      sql`INSERT INTO waypoints (route_id, position, elevation_m, sort_order, name, type) VALUES ${sql.join(values, sql`, `)}`,
     );
   }
 

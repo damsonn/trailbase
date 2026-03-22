@@ -14,3 +14,4 @@ export * from "./geo/distance.js";
 
 // GPX
 export * from "./gpx/parser.js";
+export * from "./gpx/convert.js";

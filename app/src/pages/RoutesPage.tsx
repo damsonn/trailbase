@@ -253,6 +253,12 @@ export function RoutesPage() {
             {meta.total} route{meta.total !== 1 ? "s" : ""}
           </span>
           <Link
+            to="/routes/import"
+            className="rounded-button border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-800 transition hover:bg-neutral-100"
+          >
+            Import GPX
+          </Link>
+          <Link
             to="/routes/new"
             className="rounded-button bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90"
           >

@@ -44,6 +44,16 @@ describe("route auth guard", () => {
     const res = await app.request("/api/routes/some-id", { method: "DELETE" });
     expect(res.status).toBe(401);
   });
+
+  it("POST /api/routes/import returns 401 without auth", async () => {
+    const res = await app.request("/api/routes/import", { method: "POST" });
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /api/routes/:id/export returns 401 without auth", async () => {
+    const res = await app.request("/api/routes/some-id/export");
+    expect(res.status).toBe(401);
+  });
 });
 
 // ── Validation tests (schemas) ───────────────────────────────────────────────
