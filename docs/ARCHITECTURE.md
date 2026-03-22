@@ -39,15 +39,15 @@
 │  │  Module  │ │  Module    │ │  Module (GPX/GeoJSON)   │ │
 │  └──────────┘ └────────────┘ └────────────────────────┘ │
 │  ┌──────────┐ ┌────────────┐ ┌────────────────────────┐ │
-│  │  Map     │ │  Elevation │ │  Sharing Module        │ │
-│  │  Adapter │ │  Adapter   │ │  (future)              │ │
+│  │  Map     │ │  Elevation │ │  Activity Module       │ │
+│  │  Adapter │ │  Adapter   │ │  (FIT/GPX import)      │ │
 │  └──────────┘ └────────────┘ └────────────────────────┘ │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────┐
 │              PostgreSQL + PostGIS                        │
-│  routes, waypoints, users, sessions, sync_log           │
+│  routes, waypoints, activities, users, sessions         │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -99,6 +99,33 @@ sessions
 ├── token_hash    TEXT
 ├── expires_at    TIMESTAMPTZ
 └── created_at    TIMESTAMPTZ
+
+activities
+├── id               UUID (PK)
+├── user_id          UUID (FK → users)
+├── route_id         UUID (FK → routes, nullable)  -- optional link to planned route
+├── name             TEXT
+├── activity_type    ENUM ('bike', 'run', 'hike', 'car')
+├── started_at       TIMESTAMPTZ
+├── finished_at      TIMESTAMPTZ
+├── geometry         GEOGRAPHY(LineString, 4326)    -- PostGIS
+├── distance_m       NUMERIC                        -- computed from track
+├── duration_s       NUMERIC                        -- elapsed time
+├── elevation_gain_m NUMERIC                        -- computed
+├── elevation_loss_m NUMERIC                        -- computed
+├── avg_speed_ms     NUMERIC                        -- meters/second
+├── avg_hr           NUMERIC                        -- beats/minute
+├── avg_cadence      NUMERIC                        -- rpm
+├── avg_power        NUMERIC                        -- watts
+├── calories         NUMERIC
+├── time_series      JSONB                          -- [{ts, lat, lng, ele, hr, cad, power, speed}, ...]
+├── laps             JSONB                          -- [{distance_m, duration_s, avg_speed, avg_hr, ...}, ...]
+├── source_format    TEXT                           -- 'fit' | 'gpx'
+├── device           TEXT                           -- e.g. 'Garmin Edge 540'
+├── metadata         JSONB                          -- extensible key-value
+├── deleted_at       TIMESTAMPTZ                    -- soft delete
+├── created_at       TIMESTAMPTZ
+└── updated_at       TIMESTAMPTZ
 ```
 
 ### 3.2 Design Decisions
@@ -121,7 +148,8 @@ Trail base treats open formats as a core feature, not an afterthought.
 | **GPX 1.1** | Primary import/export format for routes, tracks, waypoints | [Topografix GPX 1.1 Schema](https://www.topografix.com/GPX/1/1/) |
 | **GeoJSON** | Internal API geometry representation; secondary export | [RFC 7946](https://datatracker.ietf.org/doc/html/rfc7946) |
 | **KML** (future) | Export for Google Earth compatibility | OGC KML 2.3 |
-| **FIT / TCX** (future) | Import from Garmin and other fitness devices | ANT+ FIT SDK / Garmin TCX |
+| **FIT** | Activity import from Garmin and fitness devices (v0.4) | ANT+ FIT SDK |
+| **TCX** (future) | Activity import/export for fitness platforms | Garmin TCX |
 
 ### 4.2 Import / Export Pipeline
 
@@ -500,6 +528,14 @@ Routing
 
 Elevation
   POST   /api/elevation            — get elevations for coordinates
+
+Activities
+  GET    /api/activities            — list (paginated, filterable)
+  POST   /api/activities/import     — upload FIT/GPX activity file
+  GET    /api/activities/:id        — get single activity + time-series
+  PUT    /api/activities/:id        — update (name, route link)
+  DELETE /api/activities/:id        — soft delete
+  GET    /api/activities/:id/export — download as GPX
 
 User Data (sovereignty)
   POST   /api/user/export          — full data export (ZIP)

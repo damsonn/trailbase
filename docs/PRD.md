@@ -2,7 +2,7 @@
 
 > **Status:** Draft | **Last updated:** 2026-03-22
 > This is a living document. Sections marked [TBD] will be expanded as the project evolves.
-> Features are tagged by phase: `[MVP]` `[v0.2]` `[v0.3]` `[v1.0]`
+> Features are tagged by phase: `[MVP]` `[v0.2]` `[v0.3]` `[v0.4]` `[v1.0]`
 
 ---
 
@@ -1057,7 +1057,312 @@ Toggle overlay showing activity density:
 
 ---
 
-## 11. Technical Constraints (MVP)
+## 11. UX Flow: Activities
+
+> **Phase:** `[v0.4]`
+> Activities are recorded GPS tracks with time-series performance data — imported from external devices (Garmin, Wahoo) or future in-app recording. They differ from routes: routes are *planned* paths, activities are *recorded* performances with pace, heart rate, cadence, and power data.
+
+### 11.1 Overview
+
+| Aspect | Detail |
+|--------|--------|
+| **What** | Recorded GPS tracks with time-stamped performance data |
+| **Import sources (v0.4)** | FIT + GPX file upload |
+| **Future sources (v1.0)** | API sync (Garmin Connect, Wahoo, Strava), in-app GPS recording |
+| **Relationship to routes** | Standalone entities that can optionally be linked to a planned route |
+| **Key differentiator** | Time-series data channels: pace/speed, heart rate, cadence, power |
+
+### 11.2 Activity Listing Page `[v0.4]`
+
+> **URL:** `/activities`
+> **Access:** Main navigation → **Activities**
+
+#### 11.2.1 Page Layout Overview
+
+```
+┌─────────────────────────────────────────────────────┐
+│  App Header (logo, nav, user menu)                  │
+├──────────┬──────────────────────────────────────────┤
+│          │  Filter Bar  [activity type, date range]  │
+│  Left    │  Sort Controls  [date, distance, etc.]    │
+│  Sidebar │  Search Bar  [keyword]                    │
+│  (nav)   │──────────────────────────────────────────│
+│          │  Activity List                            │
+│          │  ┌─ Row: name, type, date, dist, dur... ─┐│
+│          │  │  [expand chevron] → inline detail     ││
+│          │  └──────────────────────────────────────┘│
+│          │  ... more rows ...                       │
+│          │  Pagination                              │
+└──────────┴──────────────────────────────────────────┘
+```
+
+#### 11.2.2 Column Layout
+
+Each activity row displays:
+
+| Column | Content |
+|--------|---------|
+| Activity name | Bold clickable link |
+| Activity type | Icon badge (bike / run / hike) |
+| Date | Activity date (e.g., `3/15/2026`) |
+| Distance | e.g., `42.3 km` |
+| Duration | e.g., `1:45:23` |
+| Avg Pace/Speed | e.g., `28.4 km/h` or `5:12 /km` (per user preference) |
+| Elevation Gain | e.g., `512 m` |
+| Map thumbnail | Small static track preview |
+| Chevron (expand) | Expands/collapses the row detail panel |
+
+#### 11.2.3 Filters
+
+| Filter | Control Type | Default | Behaviour |
+|--------|-------------|---------|-----------|
+| Activity Type | Dropdown (multi-select) | All types | Filter by bike / run / hike |
+| Date Range | Date range picker | Any dates | Filter by activity date |
+| Distance | Range slider | Any length | Filter by distance range |
+
+#### 11.2.4 Sort Controls
+
+| Control | Type | Options |
+|---------|------|---------|
+| Sort By | Radio group | Date _(default)_, Distance, Duration, Name |
+| Sort Order | Radio group | Ascending, Descending _(default)_ |
+
+#### 11.2.5 Expanded Row Detail
+
+Clicking the chevron expands a two-column detail panel:
+
+**Left column — Activity summary:**
+- Activity name (heading)
+- **Date:** Date and time
+- **Distance:** e.g., `42.3 km`
+- **Duration:** e.g., `1:45:23`
+- **Elevation:** e.g., `+512 m / -498 m`
+- **Avg Pace/Speed:** e.g., `28.4 km/h`
+- **View Full Details** link → navigates to activity detail page
+
+**Right column — Mini map + sparkline:**
+- Interactive map preview of the track geometry
+- Elevation sparkline below the map
+
+### 11.3 Activity Detail Page `[v0.4]`
+
+> **URL:** `/activities/:id`
+> **Access:** Click an activity name from the listing page, or direct URL
+
+#### 11.3.1 Page Layout Overview
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  App Header                                              │
+├────────────────────────┬─────────────────────────────────┤
+│  Left Panel            │  Right Panel                    │
+│  (scrollable)          │  (full height)                  │
+│                        │                                 │
+│  ┌──────────────────┐  │  ┌───────────────────────────┐  │
+│  │ Action Bar       │  │  │                           │  │
+│  │ [Export][Delete]  │  │  │    Interactive Map         │
+│  │ [Link to Route]  │  │  │    (track colored by       │
+│  ├──────────────────┤  │  │     pace or HR)            │
+│  │ Activity Header  │  │  │                           │  │
+│  │ Title + Badge    │  │  ├───────────────────────────┤  │
+│  │ Date/Time        │  │  │  Charts (tabbed)          │  │
+│  ├──────────────────┤  │  │  [Elev][Pace][HR]         │  │
+│  │ Stats Grid       │  │  │  [Cadence][Power]         │  │
+│  ├──────────────────┤  │  └───────────────────────────┘  │
+│  │ Linked Route     │  │                                 │
+│  │ (if linked)      │  │                                 │
+│  ├──────────────────┤  │                                 │
+│  │ Laps Table       │  │                                 │
+│  ├──────────────────┤  │                                 │
+│  │ Splits Table     │  │                                 │
+│  ├──────────────────┤  │                                 │
+│  │ Metadata         │  │                                 │
+│  └──────────────────┘  │                                 │
+└────────────────────────┴─────────────────────────────────┘
+```
+
+#### 11.3.2 Action Bar
+
+| Button | Type | Behaviour |
+|--------|------|-----------|
+| `Export` | Button | Downloads activity as GPX file |
+| `Delete` | Button | Soft-deletes activity (with confirmation dialog) |
+| `Link to Route` | Button | Opens route search/select modal (see 11.6) |
+
+#### 11.3.3 Activity Header
+
+- **Activity title** (large heading)
+- **Activity type badge** — pill-shaped: `RIDE`, `RUN`, `HIKE`
+- **Date and time** — e.g., `March 15, 2026 at 7:32 AM`
+
+#### 11.3.4 Stats Grid
+
+Up to 3x3 grid showing available stats. Stats with no data are hidden.
+
+| Stat | Icon | Example | Condition |
+|------|------|---------|-----------|
+| Distance | circle | `42.3 km` | Always |
+| Duration | clock | `1:45:23` | Always |
+| Avg Pace/Speed | gauge | `28.4 km/h` or `5:12 /km` | Always (format per user preference) |
+| Elevation gain | `+` | `512 m` | Always |
+| Elevation loss | `−` | `498 m` | Always |
+| Avg Heart Rate | heart | `152 bpm` | If HR data present |
+| Avg Cadence | cycle | `88 rpm` | If cadence data present |
+| Avg Power | bolt | `245 W` | If power data present |
+| Calories | flame | `1,240 kcal` | If calorie data present |
+
+#### 11.3.5 Linked Route Card
+
+Shown only when the activity is linked to a route.
+
+| Field | Content |
+|-------|---------|
+| Route name | Clickable link → route detail page |
+| Comparison | Planned vs actual: distance and elevation gain |
+
+Example: `Three Sisters Loop — Planned: 29.7 km / +384 m · Actual: 30.1 km / +401 m`
+
+#### 11.3.6 Laps Table
+
+Shown when lap data is present (common in FIT files from structured workouts).
+
+| Column | Content |
+|--------|---------|
+| Lap # | Sequential number |
+| Distance | e.g., `1.0 km` |
+| Duration | e.g., `3:24` |
+| Avg Pace/Speed | Per user preference |
+| Avg HR | If available |
+
+#### 11.3.7 Splits Table
+
+Per-kilometre (or per-mile) breakdown:
+
+| Column | Content |
+|--------|---------|
+| Split # | e.g., `1`, `2`, ... |
+| Pace/Speed | Per user preference |
+| Elevation | Change in elevation for that split |
+| Avg HR | If available |
+
+#### 11.3.8 Metadata
+
+| Field | Icon | Example |
+|-------|------|---------|
+| Date | calendar | `March 15, 2026` |
+| Start Time | clock | `7:32 AM` |
+| Device | device | `Garmin Edge 540` |
+| Source | file | `morning_ride.fit` |
+
+#### 11.3.9 Map Panel
+
+Full-height right panel with interactive map.
+
+- **Track visualization:** Activity track colored by pace or heart rate (gradient from green → yellow → red)
+- **Start/end markers:** Green marker at start, red at end
+- **Map controls:** Same as route detail (fullscreen, layer switcher, zoom)
+- **Synced with charts:** Hovering a chart shows a marker on the map at the corresponding position
+
+#### 11.3.10 Charts Panel
+
+Below the map, tabbed chart area. Only tabs with available data are shown.
+
+| Tab | Chart Type | X-Axis | Y-Axis | Condition |
+|-----|-----------|--------|--------|-----------|
+| Elevation | Area chart | Distance (km) | Elevation (m) | Always |
+| Pace/Speed | Line chart | Distance (km) | min/km or km/h | Always |
+| Heart Rate | Line chart | Distance (km) | bpm | If HR data present |
+| Cadence | Line chart | Distance (km) | rpm | If cadence present |
+| Power | Line chart | Distance (km) | watts | If power present |
+
+**Shared behaviour across all chart tabs:**
+- Hover tooltip showing value + distance from start
+- Synced crosshair — hovering one chart highlights the same distance point on all other charts and places a marker on the map
+- Stats bar below chart showing min / avg / max for the active metric
+
+### 11.4 Activity Import `[v0.4]`
+
+> **URL:** `/activities/upload`
+> **Access:** Main navigation → **Activities** → **Upload**, or direct URL
+
+#### Layout
+
+**Main area:**
+- Page heading: `UPLOAD ACTIVITY FILES`
+- Drag-and-drop zone:
+  - Upload arrow icon
+  - **Drag and drop or select activity files to upload**
+  - **Accepted file types: FIT, GPX** `[v1.0: add TCX]`
+  - **Browse Files** button — opens native file picker
+
+#### Upload Behaviour
+
+1. User drags a `.fit` or `.gpx` file onto the drop zone, or clicks **Browse Files**
+2. File is uploaded, parsed, and validated
+3. Time-series data extracted (coordinates, timestamps, HR, cadence, power, speed)
+4. Summary stats computed (distance, duration, elevation gain/loss, averages)
+5. Laps extracted (FIT files with structured workouts)
+6. A new activity is created
+7. User is redirected to the newly created activity detail page
+
+### 11.5 Pace/Speed Display Preference `[v0.4]`
+
+| Aspect | Detail |
+|--------|--------|
+| Setting | Toggle between pace (min/km) and speed (km/h) |
+| Default | Auto by activity type: cycling → speed (km/h), running/hiking → pace (min/km) |
+| Scope | Applied globally: activity list, detail page, charts, splits |
+| Persistence | localStorage (future: user profile for cross-device sync) |
+
+### 11.6 Route Linking `[v0.4]`
+
+**Trigger:** Activity detail page → **Link to Route** button in action bar.
+
+**Modal: Link to Route**
+
+| Element | Description |
+|---------|-------------|
+| Search input | Full-text search across user's routes |
+| Results list | Matching routes with name, distance, activity type, map thumbnail |
+| **Cancel** | Dismiss modal |
+| **Link** | Links the selected route to the activity |
+
+When linked:
+- Activity detail shows a linked route card (see 11.3.5) with planned vs actual comparison
+- **Unlink** action appears to remove the association
+
+### 11.7 User Journey
+
+```
+Navigate to /activities/upload
+    │
+    ├─ Drag & drop .fit or .gpx file
+    │
+    ├─ File parsed (geometry + time-series data extracted)
+    │
+    └─ Redirected to /activities/:id
+            │
+            ├─ View stats (distance, duration, pace, HR, etc.)
+            │
+            ├─ Interact with map (track colored by pace/HR)
+            │
+            ├─ Browse charts (Elevation / Pace / HR / Cadence / Power)
+            │       └─ Synced crosshair across charts + map marker
+            │
+            ├─ View splits (per-km breakdown)
+            ├─ View laps (if present)
+            │
+            ├─ [Optional] Link to Route → search & select
+            │       └─ See planned vs actual comparison
+            │
+            ├─ Export → download as .gpx
+            │
+            └─ Delete → confirmation → soft-delete
+```
+
+---
+
+## 12. Technical Constraints (MVP)
 
 | Concern | Decision |
 |---------|----------|
@@ -1069,7 +1374,7 @@ Toggle overlay showing activity density:
 
 ---
 
-## 12. Feature Phase Matrix
+## 13. Feature Phase Matrix
 
 Single reference table mapping every feature to its target phase.
 
@@ -1188,19 +1493,37 @@ Single reference table mapping every feature to its target phase.
 | Heatmaps (global + personal) | | | x | |
 | Offline tile caching | | | | x |
 
+### Activities
+
+| Feature | v0.4 | v1.0 |
+|---------|------|------|
+| Activity listing page (`/activities`) | x | |
+| Activity detail page (stats, map, metadata) | x | |
+| FIT + GPX activity import | x | |
+| Time-series charts (elevation, pace, HR, cadence, power) | x | |
+| Synced chart crosshair + map highlight | x | |
+| Laps and splits tables | x | |
+| Pace/speed display preference | x | |
+| Optional route linking | x | |
+| Activity export (GPX) | x | |
+| API sync (Garmin Connect, Wahoo, Strava) | | x |
+| In-app GPS recording | | x |
+| Live activity tracking | | x |
+
 ---
 
-## 13. Out of Scope (MVP)
+## 14. Out of Scope (MVP)
 
 The following are planned for future iterations but explicitly excluded from v0.1:
 
 - **v0.2:** Collections, advanced filters (range sliders, date pickers), location search, map view toggle, bulk actions, sharing, surfaces/cuesheet/climbs, route tools (reverse, out-and-back), surface type preference, route color, TCX support, version history, photos
 - **v0.3:** Full multi-format export dialog (FIT, KML, CSV, images), print PDF, cue review mode, import in planner, custom POI/cue/control point modes, advanced route tools (split, trace, selection), custom map layers, heatmaps, settings panel, session resume, multi-route planner, reviews & comments, social features
-- **v1.0:** Native mobile app (iOS/Android), offline maps and tile caching, activity recording / GPS tracking, device sync (Garmin, Wahoo, Strava), turn-by-turn navigation, community module/plugin system
+- **v0.4:** Activity listing page, activity detail with time-series charts (pace, HR, cadence, power), FIT + GPX activity import, laps/splits tables, route linking, pace/speed display preference, activity export
+- **v1.0:** Native mobile app (iOS/Android), offline maps and tile caching, in-app GPS recording, live activity tracking, API sync (Garmin Connect, Wahoo, Strava), device sync, turn-by-turn navigation, community module/plugin system
 
 ---
 
-## 14. Success Metrics
+## 15. Success Metrics
 
 | Metric | Target |
 |--------|--------|
@@ -1213,19 +1536,19 @@ The following are planned for future iterations but explicitly excluded from v0.
 
 ---
 
-## 15. Roadmap (High-Level)
+## 16. Roadmap (High-Level)
 
 | Phase | Focus |
 |-------|-------|
 | **v0.1 — MVP** | Auth, route CRUD, route builder (snap-to-road), GPX import/export, base map layers, elevation profile |
 | **v0.2 — Polish & Sharing** | Collections, privacy controls, rich filters/sort, sharing (link/QR/image), surfaces/cuesheet/climbs, route tools (reverse, out-and-back), TCX support, photos, version history |
 | **v0.3 — Layers & Advanced Tools** | Custom map layers, heatmaps, full multi-format export, cue review mode, import in planner, advanced route tools (split, trace, selection), custom POI/cue/control point, print PDF, module architecture |
-| **v0.4 — Activity Tracking** | GPS recording, activity history, stats |
-| **v1.0 — Native App** | iOS/Android with offline maps, turn-by-turn navigation, device sync |
+| **v0.4 — Activities** | Activity import (FIT + GPX), activity listing page, activity detail with time-series charts (pace, HR, cadence, power), laps/splits, route linking, pace/speed display preference |
+| **v1.0 — Native App** | iOS/Android with offline maps, turn-by-turn navigation, in-app GPS recording, live tracking, API sync (Garmin/Wahoo/Strava) |
 
 ---
 
-## 16. Open Questions
+## 17. Open Questions
 
 - [x] Routing engine selection — **Valhalla** (self-hosted). Covers all activity profiles, MIT license, self-hostable, supports turn-by-turn for future nav.
 - [x] Auth provider — **Better-Auth** (TypeScript library, session-based, Drizzle adapter). No external service required.
