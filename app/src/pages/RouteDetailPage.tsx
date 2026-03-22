@@ -7,8 +7,16 @@ import {
   type RouteDetail,
 } from "../lib/api.js";
 import { BaseMap, type MapViewState } from "../components/map/BaseMap.js";
+import { ElevationProfile } from "../components/ElevationProfile.js";
 import { computeBoundsView } from "../lib/map-utils.js";
-import { ACTIVITY_LABELS, formatDistance, formatElevation } from "../lib/format.js";
+import {
+  ACTIVITY_LABELS,
+  formatDistance,
+  formatElevation,
+  formatDuration,
+  estimateTimeSeconds,
+} from "../lib/format.js";
+import { reverseGeocode } from "../lib/geocode.js";
 
 export { computeBoundsView };
 
@@ -23,6 +31,9 @@ export function RouteDetailPage() {
   // Delete state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Location metadata (reverse geocoded)
+  const [location, setLocation] = useState<string | null>(null);
 
   const initialMapView = useMemo<MapViewState | null>(() => {
     if (!route || route.waypoints.length === 0) return null;
@@ -56,6 +67,43 @@ export function RouteDetailPage() {
         ]),
       },
     };
+  }, [route]);
+
+  const estimatedTime = useMemo(() => {
+    if (!route?.distanceM) return null;
+    return estimateTimeSeconds(route.distanceM, route.activityType);
+  }, [route]);
+
+  const startEnd = useMemo(() => {
+    if (!route) return null;
+    if (route.geometry && route.geometry.coordinates.length >= 2) {
+      const coords = route.geometry.coordinates;
+      return {
+        start: { lng: coords[0]![0]!, lat: coords[0]![1]! },
+        end: { lng: coords[coords.length - 1]![0]!, lat: coords[coords.length - 1]![1]! },
+      };
+    }
+    if (route.waypoints.length >= 2) {
+      return {
+        start: route.waypoints[0]!.position,
+        end: route.waypoints[route.waypoints.length - 1]!.position,
+      };
+    }
+    return null;
+  }, [route]);
+
+  useEffect(() => {
+    if (!route || route.waypoints.length === 0) return;
+    const { lat, lng } = route.waypoints[0]!.position;
+    let cancelled = false;
+    reverseGeocode(lat, lng)
+      .then((result) => {
+        if (cancelled) return;
+        const parts = [result.city, result.region].filter(Boolean);
+        setLocation(parts.length > 0 ? parts.join(", ") : null);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, [route]);
 
   const loadRoute = useCallback(async () => {
@@ -127,6 +175,9 @@ export function RouteDetailPage() {
           <span className="mt-2 inline-block rounded-button bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-800">
             {ACTIVITY_LABELS[route.activityType] ?? route.activityType}
           </span>
+          {location && (
+            <p className="mt-1 text-sm text-neutral-500">Starts in: {location}</p>
+          )}
         </div>
 
         <div className="flex gap-2">
@@ -152,6 +203,18 @@ export function RouteDetailPage() {
             initialViewState={initialMapView}
             cursor="grab"
           >
+            {/* Start/end markers */}
+            {startEnd && (
+              <>
+                <Marker longitude={startEnd.start.lng} latitude={startEnd.start.lat} anchor="center">
+                  <div className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-green-500 shadow" />
+                </Marker>
+                <Marker longitude={startEnd.end.lng} latitude={startEnd.end.lat} anchor="center">
+                  <div className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-red-500 shadow" />
+                </Marker>
+              </>
+            )}
+
             {/* Waypoint markers — group overlapping positions */}
             {(() => {
               const groups = new Map<string, number[]>();
@@ -192,6 +255,23 @@ export function RouteDetailPage() {
                     "line-opacity": 0.8,
                   }}
                 />
+                <Layer
+                  id="route-arrows-layer"
+                  type="symbol"
+                  layout={{
+                    "symbol-placement": "line",
+                    "symbol-spacing": 100,
+                    "text-field": "\u25B6",
+                    "text-size": 12,
+                    "text-rotation-alignment": "map",
+                    "text-allow-overlap": true,
+                    "text-ignore-placement": true,
+                  }}
+                  paint={{
+                    "text-color": "#2563eb",
+                    "text-opacity": 0.7,
+                  }}
+                />
               </Source>
             )}
           </BaseMap>
@@ -199,7 +279,7 @@ export function RouteDetailPage() {
       )}
 
       {/* Stats */}
-      <div className="mb-8 grid grid-cols-3 gap-4">
+      <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
         <div className="rounded-button border border-neutral-200 bg-white p-4">
           <p className="text-xs text-neutral-500">Distance</p>
           <p className="mt-1 text-lg font-semibold">{formatDistance(route.distanceM)}</p>
@@ -212,7 +292,27 @@ export function RouteDetailPage() {
           <p className="text-xs text-neutral-500">Elevation Loss</p>
           <p className="mt-1 text-lg font-semibold">{formatElevation(route.elevationLossM)}</p>
         </div>
+        <div className="rounded-button border border-neutral-200 bg-white p-4">
+          <p className="text-xs text-neutral-500">Est. Time</p>
+          <p className="mt-1 text-lg font-semibold">
+            {estimatedTime != null ? formatDuration(estimatedTime) : "-"}
+          </p>
+        </div>
       </div>
+
+      {/* Elevation Profile */}
+      {route.geometry &&
+        route.geometry.coordinates.length >= 2 &&
+        route.geometry.coordinates.some((c: number[]) => c[2] != null) && (
+          <div className="mb-8">
+            <h2 className="mb-3 text-lg font-semibold text-neutral-900">
+              Elevation Profile
+            </h2>
+            <div className="h-48 rounded-button border border-neutral-200 bg-white p-4">
+              <ElevationProfile coordinates={route.geometry.coordinates} />
+            </div>
+          </div>
+        )}
 
       {/* Waypoints */}
       {route.waypoints.length > 0 && (

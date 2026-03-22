@@ -28,7 +28,8 @@ vi.mock("react-map-gl/maplibre", async () => {
     }),
     Source: ({ children }: { children?: React.ReactNode }) =>
       React.createElement("div", { "data-testid": "map-source" }, children),
-    Layer: () => React.createElement("div", { "data-testid": "map-layer" }),
+    Layer: ({ id }: { id?: string }) =>
+      React.createElement("div", { "data-testid": "map-layer", "data-layer-id": id }),
     Marker: ({ children }: { children?: React.ReactNode }) =>
       React.createElement("div", { "data-testid": "map-marker" }, children),
     NavigationControl: () => null,
@@ -43,6 +44,22 @@ const mockDeleteRoute = vi.fn();
 vi.mock("../lib/api.js", () => ({
   fetchRoute: (...args: unknown[]) => mockFetchRoute(...args),
   deleteRoute: (...args: unknown[]) => mockDeleteRoute(...args),
+}));
+
+// Mock geocode — default to resolving with Sydney location
+const mockReverseGeocode = vi.fn().mockResolvedValue({
+  city: "Sydney",
+  region: "New South Wales",
+  country: "Australia",
+  displayName: "Sydney, NSW, Australia",
+});
+vi.mock("../lib/geocode.js", () => ({
+  reverseGeocode: (...args: unknown[]) => mockReverseGeocode(...args),
+}));
+
+// Mock ElevationProfile to avoid Recharts in tests
+vi.mock("../components/ElevationProfile.js", () => ({
+  ElevationProfile: () => React.createElement("div", { "data-testid": "elevation-profile" }),
 }));
 
 const MOCK_ROUTE = {
@@ -162,11 +179,9 @@ describe("RouteDetailPage", () => {
       expect(screen.getByTestId("map")).toBeInTheDocument();
     });
     const markers = screen.getAllByTestId("map-marker");
-    expect(markers).toHaveLength(2);
-    expect(markers[0]).toHaveTextContent("1");
-    expect(markers[1]).toHaveTextContent("2");
+    // 2 start/end markers + 2 waypoint markers = 4
+    expect(markers).toHaveLength(4);
     expect(screen.getByTestId("map-source")).toBeInTheDocument();
-    expect(screen.getByTestId("map-layer")).toBeInTheDocument();
   });
 
   it("does not render map when route has no waypoints", async () => {
@@ -207,9 +222,8 @@ describe("RouteDetailPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("map")).toBeInTheDocument();
     });
-    // Map source should be rendered (uses stored geometry, not waypoint straight lines)
     expect(screen.getByTestId("map-source")).toBeInTheDocument();
-    expect(screen.getByTestId("map-layer")).toBeInTheDocument();
+    expect(screen.getAllByTestId("map-layer")).toHaveLength(2);
   });
 
   it("falls back to waypoint straight lines when no stored geometry", async () => {
@@ -220,7 +234,113 @@ describe("RouteDetailPage", () => {
     });
     // Should still render route line from waypoints
     expect(screen.getByTestId("map-source")).toBeInTheDocument();
-    expect(screen.getByTestId("map-layer")).toBeInTheDocument();
+  });
+
+  it("displays estimated time in stats grid", async () => {
+    mockFetchRoute.mockResolvedValue({ data: MOCK_ROUTE });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText("Est. Time")).toBeInTheDocument();
+    });
+    // 5000m bike at 18km/h = 1000s ≈ 16m
+    expect(screen.getByText("16m")).toBeInTheDocument();
+  });
+
+  it("displays dash for estimated time when distance is null", async () => {
+    mockFetchRoute.mockResolvedValue({
+      data: { ...MOCK_ROUTE, distanceM: null },
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText("Est. Time")).toBeInTheDocument();
+    });
+    // All dashes: distance, est. time
+    const dashes = screen.getAllByText("-");
+    expect(dashes.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders directional arrows layer", async () => {
+    mockFetchRoute.mockResolvedValue({ data: MOCK_ROUTE });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByTestId("map")).toBeInTheDocument();
+    });
+    const layers = screen.getAllByTestId("map-layer");
+    expect(layers).toHaveLength(2);
+    const arrowLayer = layers.find(
+      (el) => el.getAttribute("data-layer-id") === "route-arrows-layer",
+    );
+    expect(arrowLayer).toBeDefined();
+  });
+
+  it("renders start and end markers", async () => {
+    mockFetchRoute.mockResolvedValue({ data: MOCK_ROUTE });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByTestId("map")).toBeInTheDocument();
+    });
+    const markers = screen.getAllByTestId("map-marker");
+    // 2 start/end + 2 waypoint markers
+    expect(markers).toHaveLength(4);
+  });
+
+  it("displays reverse-geocoded location", async () => {
+    mockFetchRoute.mockResolvedValue({ data: MOCK_ROUTE });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText(/Starts in:/)).toBeInTheDocument();
+    });
+    expect(screen.getByText("Starts in: Sydney, New South Wales")).toBeInTheDocument();
+  });
+
+  it("hides location when geocoding fails", async () => {
+    mockReverseGeocode.mockRejectedValue(new Error("Network error"));
+    mockFetchRoute.mockResolvedValue({ data: MOCK_ROUTE });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Test Route" })).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/Starts in:/)).not.toBeInTheDocument();
+  });
+
+  it("renders elevation profile when geometry has elevation data", async () => {
+    const routeWithElevation = {
+      ...MOCK_ROUTE,
+      geometry: {
+        type: "LineString" as const,
+        coordinates: [
+          [151.21, -33.85, 5],
+          [151.23, -33.87, 50],
+          [151.25, -33.88, 25],
+          [151.27, -33.89, 10],
+        ],
+      },
+    };
+    mockFetchRoute.mockResolvedValue({ data: routeWithElevation });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText("Elevation Profile")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("elevation-profile")).toBeInTheDocument();
+  });
+
+  it("hides elevation profile when geometry has no elevation", async () => {
+    const routeNoElevation = {
+      ...MOCK_ROUTE,
+      geometry: {
+        type: "LineString" as const,
+        coordinates: [
+          [151.21, -33.85],
+          [151.27, -33.89],
+        ],
+      },
+    };
+    mockFetchRoute.mockResolvedValue({ data: routeNoElevation });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Test Route" })).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Elevation Profile")).not.toBeInTheDocument();
   });
 });
 

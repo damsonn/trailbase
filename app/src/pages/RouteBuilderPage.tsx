@@ -13,6 +13,7 @@ import {
   type DirectionsResult,
 } from "../lib/api.js";
 import { computeBoundsView } from "../lib/map-utils.js";
+import { formatDuration } from "../lib/format.js";
 import type { ActivityType } from "@trailbase/shared";
 
 interface Waypoint {
@@ -665,9 +666,3 @@ export function RouteBuilderPage() {
   );
 }
 
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}

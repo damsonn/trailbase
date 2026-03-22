@@ -27,3 +27,28 @@ export function formatDate(iso: string): string {
     day: "numeric",
   });
 }
+
+/** Average speeds in km/h by activity type */
+export const ACTIVITY_SPEEDS: Record<string, number> = {
+  bike: 18,
+  hike: 4.5,
+  car: 60,
+};
+
+/** Estimate travel time in seconds from distance (meters) and activity type */
+export function estimateTimeSeconds(
+  distanceM: number,
+  activityType: string,
+): number {
+  const speedKmh = ACTIVITY_SPEEDS[activityType] ?? ACTIVITY_SPEEDS.hike!;
+  const speedMs = (speedKmh * 1000) / 3600;
+  return distanceM / speedMs;
+}
+
+/** Format a duration in seconds to a human-readable string */
+export function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
