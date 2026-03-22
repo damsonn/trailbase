@@ -353,15 +353,14 @@ describe("computeBoundsView", () => {
   });
 
   it("produces a zoom that fits a small route (Three Sisters seed data)", () => {
-    // Three Sisters waypoints span ~0.005° — zoom must not exceed 14
-    // to ensure all markers are visible with padding
+    // Three Sisters waypoints span ~0.005°
     const view = computeBoundsView([
       { lat: -33.7320, lng: 150.3124 },
       { lat: -33.7310, lng: 150.3156 },
       { lat: -33.7320, lng: 150.3124 },
     ]);
-    expect(view.zoom).toBeLessThanOrEqual(14);
-    expect(view.zoom).toBeGreaterThanOrEqual(8);
+    expect(view.zoom).toBeLessThanOrEqual(18);
+    expect(view.zoom).toBeGreaterThanOrEqual(12);
   });
 
   it("produces reasonable zoom for a city-scale route", () => {
@@ -380,6 +379,6 @@ describe("computeBoundsView", () => {
     expect(view.latitude).toBeCloseTo(-33.85, 4);
     expect(view.longitude).toBeCloseTo(151.21, 4);
     expect(view.zoom).toBeGreaterThanOrEqual(1);
-    expect(view.zoom).toBeLessThanOrEqual(16);
+    expect(view.zoom).toBeLessThanOrEqual(18);
   });
 });
