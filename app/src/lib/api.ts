@@ -84,6 +84,11 @@ export async function updateRoute(
     name?: string;
     description?: string | null;
     activityType?: string;
+    waypoints?: { lat: number; lng: number }[];
+    geometry?: { type: "LineString"; coordinates: number[][] };
+    distanceM?: number;
+    elevationGainM?: number;
+    elevationLossM?: number;
     version: number;
   },
 ) {

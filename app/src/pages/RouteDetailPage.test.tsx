@@ -2,7 +2,8 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { RouteDetailPage, computeBoundsView } from "./RouteDetailPage.js";
+import { RouteDetailPage } from "./RouteDetailPage.js";
+import { computeBoundsView } from "../lib/map-utils.js";
 
 // Mock auth
 vi.mock("../lib/auth-client.js", () => ({
@@ -37,22 +38,11 @@ vi.mock("react-map-gl/maplibre", async () => {
 
 // Mock API
 const mockFetchRoute = vi.fn();
-const mockUpdateRoute = vi.fn();
 const mockDeleteRoute = vi.fn();
 
 vi.mock("../lib/api.js", () => ({
   fetchRoute: (...args: unknown[]) => mockFetchRoute(...args),
-  updateRoute: (...args: unknown[]) => mockUpdateRoute(...args),
   deleteRoute: (...args: unknown[]) => mockDeleteRoute(...args),
-  ApiError: class ApiError extends Error {
-    code: string;
-    status: number;
-    constructor(msg: string, code: string, status: number) {
-      super(msg);
-      this.code = code;
-      this.status = status;
-    }
-  },
 }));
 
 const MOCK_ROUTE = {
@@ -148,15 +138,12 @@ describe("RouteDetailPage", () => {
     expect(screen.getByText("Delete")).toBeInTheDocument();
   });
 
-  it("enters edit mode", async () => {
+  it("edit button links to route builder", async () => {
     mockFetchRoute.mockResolvedValue({ data: MOCK_ROUTE });
     renderPage();
     await waitFor(() => screen.getByText("Edit"));
-    fireEvent.click(screen.getByText("Edit"));
-    expect(screen.getByLabelText("Route name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Description")).toBeInTheDocument();
-    expect(screen.getByText("Save")).toBeInTheDocument();
-    expect(screen.getByText("Cancel")).toBeInTheDocument();
+    const editLink = screen.getByText("Edit").closest("a");
+    expect(editLink).toHaveAttribute("href", "/routes/r1/edit");
   });
 
   it("shows delete confirmation dialog", async () => {

@@ -3,12 +3,11 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { Source, Layer, Marker } from "react-map-gl/maplibre";
 import {
   fetchRoute,
-  updateRoute,
   deleteRoute,
   type RouteDetail,
-  ApiError,
 } from "../lib/api.js";
 import { BaseMap, type MapViewState } from "../components/map/BaseMap.js";
+import { computeBoundsView } from "../lib/map-utils.js";
 
 const ACTIVITY_LABELS: Record<string, string> = {
   bike: "Bike",
@@ -26,39 +25,7 @@ function formatElevation(m: number | null): string {
   return `${Math.round(m)} m`;
 }
 
-/**
- * Compute a map view state that fits all given points with padding.
- * Exported for testing.
- */
-export function computeBoundsView(
-  points: { lat: number; lng: number }[],
-): MapViewState {
-  const lats = points.map((p) => p.lat);
-  const lngs = points.map((p) => p.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-
-  // Add padding: at least 3x the span or a minimum of 0.01° so small
-  // routes don't end up zoomed in too far and clipping markers.
-  const rawLatSpan = maxLat - minLat;
-  const rawLngSpan = maxLng - minLng;
-  const latSpan = Math.max(rawLatSpan * 3, 0.01);
-  const lngSpan = Math.max(rawLngSpan * 3, 0.01);
-
-  // Use the larger span to compute zoom. The formula maps degrees-per-tile
-  // at zoom 0 (360° for lng, 180° for lat) to the span we need to show.
-  const zoomLng = Math.log2(360 / lngSpan);
-  const zoomLat = Math.log2(180 / latSpan);
-  const zoom = Math.max(1, Math.min(16, Math.floor(Math.min(zoomLng, zoomLat))));
-
-  return {
-    latitude: (minLat + maxLat) / 2,
-    longitude: (minLng + maxLng) / 2,
-    zoom,
-  };
-}
+export { computeBoundsView };
 
 export function RouteDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -67,14 +34,6 @@ export function RouteDetailPage() {
   const [route, setRoute] = useState<RouteDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Edit state
-  const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editActivity, setEditActivity] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Delete state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -132,40 +91,6 @@ export function RouteDetailPage() {
     loadRoute();
   }, [loadRoute]);
 
-  function startEdit() {
-    if (!route) return;
-    setEditName(route.name);
-    setEditDescription(route.description ?? "");
-    setEditActivity(route.activityType);
-    setSaveError(null);
-    setEditing(true);
-  }
-
-  async function handleSave() {
-    if (!route || !id) return;
-    setSaving(true);
-    setSaveError(null);
-
-    try {
-      const res = await updateRoute(id, {
-        name: editName,
-        description: editDescription || null,
-        activityType: editActivity,
-        version: route.version,
-      });
-      setRoute({ ...route, ...res.data });
-      setEditing(false);
-    } catch (err) {
-      if (err instanceof ApiError && err.code === "VERSION_CONFLICT") {
-        setSaveError("This route was modified elsewhere. Please refresh and try again.");
-      } else {
-        setSaveError(err instanceof Error ? err.message : "Failed to save");
-      }
-    } finally {
-      setSaving(false);
-    }
-  }
-
   async function handleDelete() {
     if (!id) return;
     setDeleting(true);
@@ -210,80 +135,29 @@ export function RouteDetailPage() {
       {/* Header */}
       <div className="mb-6 flex items-start justify-between">
         <div>
-          {editing ? (
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                aria-label="Route name"
-                className="block w-full rounded-button border border-neutral-200 px-3 py-2 text-lg font-bold focus:border-primary focus:outline-none"
-              />
-              <textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                placeholder="Description (optional)"
-                aria-label="Description"
-                rows={3}
-                className="block w-full rounded-button border border-neutral-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              />
-              <select
-                value={editActivity}
-                onChange={(e) => setEditActivity(e.target.value)}
-                aria-label="Activity type"
-                className="rounded-button border border-neutral-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              >
-                <option value="bike">Bike</option>
-                <option value="hike">Hike</option>
-                <option value="car">Car</option>
-              </select>
-              {saveError && <p className="text-sm text-error">{saveError}</p>}
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSave}
-                  disabled={saving || !editName.trim()}
-                  className="rounded-button bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-light disabled:opacity-50"
-                >
-                  {saving ? "Saving..." : "Save"}
-                </button>
-                <button
-                  onClick={() => setEditing(false)}
-                  disabled={saving}
-                  className="rounded-button border border-neutral-200 px-4 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-100"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <h1 className="text-2xl font-bold text-neutral-900">{route.name}</h1>
-              {route.description && (
-                <p className="mt-2 text-neutral-500">{route.description}</p>
-              )}
-              <span className="mt-2 inline-block rounded-button bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-800">
-                {ACTIVITY_LABELS[route.activityType] ?? route.activityType}
-              </span>
-            </>
+          <h1 className="text-2xl font-bold text-neutral-900">{route.name}</h1>
+          {route.description && (
+            <p className="mt-2 text-neutral-500">{route.description}</p>
           )}
+          <span className="mt-2 inline-block rounded-button bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-800">
+            {ACTIVITY_LABELS[route.activityType] ?? route.activityType}
+          </span>
         </div>
 
-        {!editing && (
-          <div className="flex gap-2">
-            <button
-              onClick={startEdit}
-              className="rounded-button border border-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-100"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="rounded-button border border-error/30 px-3 py-1.5 text-sm font-medium text-error hover:bg-error/5"
-            >
-              Delete
-            </button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <Link
+            to={`/routes/${id}/edit`}
+            className="rounded-button border border-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-100"
+          >
+            Edit
+          </Link>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="rounded-button border border-error/30 px-3 py-1.5 text-sm font-medium text-error hover:bg-error/5"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       {/* Map */}

@@ -50,6 +50,14 @@ function AppLayout() {
               }
             />
             <Route
+              path="/routes/:id/edit"
+              element={
+                <ProtectedRoute>
+                  <RouteBuilderPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/routes/:id"
               element={
                 <ProtectedRoute>

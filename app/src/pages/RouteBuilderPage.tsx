@@ -1,14 +1,18 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useUndoRedo } from "../hooks/useUndoRedo.js";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Source, Layer, Marker, type MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { BaseMap, type MapViewState } from "../components/map/BaseMap.js";
 import { ElevationProfile } from "../components/ElevationProfile.js";
 import {
   createRoute,
+  updateRoute,
+  fetchRoute,
   fetchDirections,
+  ApiError,
   type DirectionsResult,
 } from "../lib/api.js";
+import { computeBoundsView } from "../lib/map-utils.js";
 import type { ActivityType } from "@trailbase/shared";
 
 interface Waypoint {
@@ -32,12 +36,20 @@ function nextWaypointId(): string {
 
 export function RouteBuilderPage() {
   const navigate = useNavigate();
+  const { id: editId } = useParams<{ id: string }>();
+  const isEditMode = Boolean(editId);
 
   // Form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [activityType, setActivityType] = useState<ActivityType>("hike");
   const [routingMethod, setRoutingMethod] = useState<RoutingMethod>("point-to-point");
+
+  // Edit mode state
+  const [routeVersion, setRouteVersion] = useState<number>(0);
+  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const skipNextRouteRef = useRef(false);
 
   // Map state
   const [viewState, setViewState] = useState<MapViewState>({
@@ -63,6 +75,66 @@ export function RouteBuilderPage() {
   const [isRouting, setIsRouting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Load existing route in edit mode
+  useEffect(() => {
+    if (!editId) return;
+
+    let cancelled = false;
+    setIsLoadingRoute(true);
+    setLoadError(null);
+
+    fetchRoute(editId)
+      .then((res) => {
+        if (cancelled) return;
+        const route = res.data;
+
+        setName(route.name);
+        setDescription(route.description ?? "");
+        setActivityType(route.activityType as ActivityType);
+        setRouteVersion(route.version);
+
+        // Convert API waypoints to local format
+        const localWaypoints: Waypoint[] = route.waypoints
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((wp) => ({
+            id: nextWaypointId(),
+            lat: wp.position.lat,
+            lng: wp.position.lng,
+          }));
+
+        // If route has stored geometry, it was snap-to-road
+        if (route.geometry) {
+          setRoutingMethod("snap-to-road");
+          setRouteResult({
+            geometry: route.geometry,
+            distanceM: route.distanceM ?? 0,
+            elevationGainM: route.elevationGainM ?? 0,
+            elevationLossM: route.elevationLossM ?? 0,
+            segments: [],
+          });
+        }
+
+        // Fit map to existing waypoints
+        if (localWaypoints.length > 0) {
+          setViewState(computeBoundsView(localWaypoints));
+        }
+
+        // Skip the auto-routing effect that would fire from resetWaypoints
+        skipNextRouteRef.current = true;
+        resetWaypoints(localWaypoints);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setLoadError(err instanceof Error ? err.message : "Failed to load route");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingRoute(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [editId, resetWaypoints]);
 
   // Build GeoJSON for the route line
   const routeGeoJSON = useMemo(() => {
@@ -116,7 +188,7 @@ export function RouteBuilderPage() {
   }, [waypoints, routeResult]);
 
   // Fetch directions when waypoints change in snap-to-road mode
-  const fetchRoute = useCallback(
+  const fetchRouteDirections = useCallback(
     async (wps: Waypoint[]) => {
       if (routingMethod !== "snap-to-road" || wps.length < 2) {
         setRouteResult(null);
@@ -172,7 +244,11 @@ export function RouteBuilderPage() {
 
   // Re-fetch route when waypoints change (handles undo/redo too)
   useEffect(() => {
-    fetchRoute(waypoints);
+    if (skipNextRouteRef.current) {
+      skipNextRouteRef.current = false;
+      return;
+    }
+    fetchRouteDirections(waypoints);
   }, [waypoints]);
 
   // Drag waypoint on map
@@ -212,7 +288,7 @@ export function RouteBuilderPage() {
     (newType: ActivityType) => {
       setActivityType(newType);
       if (routingMethod === "snap-to-road" && waypoints.length >= 2) {
-        // Need to re-fetch with new activity type, but fetchRoute uses current activityType
+        // Need to re-fetch with new activity type, but fetchRouteDirections uses current activityType
         // So we set it and trigger a re-fetch manually
         setRouteResult(null);
         setTimeout(() => {
@@ -256,41 +332,77 @@ export function RouteBuilderPage() {
     [waypoints, activityType],
   );
 
-  // Save route
+  // Save route (create or update)
   const handleSave = useCallback(async () => {
     if (!name.trim() || waypoints.length < 2) return;
 
     setIsSaving(true);
     setSaveError(null);
+
+    const payload = {
+      name: name.trim(),
+      description: description.trim() || undefined,
+      activityType,
+      waypoints: waypoints.map((wp) => ({ lat: wp.lat, lng: wp.lng })),
+      ...(routeResult && {
+        geometry: routeResult.geometry,
+        distanceM: routeResult.distanceM,
+        elevationGainM: routeResult.elevationGainM,
+        elevationLossM: routeResult.elevationLossM,
+      }),
+    };
+
     try {
-      const res = await createRoute({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        activityType,
-        waypoints: waypoints.map((wp) => ({ lat: wp.lat, lng: wp.lng })),
-        ...(routeResult && {
-          geometry: routeResult.geometry,
-          distanceM: routeResult.distanceM,
-          elevationGainM: routeResult.elevationGainM,
-          elevationLossM: routeResult.elevationLossM,
-        }),
-      });
-      navigate(`/routes/${res.data.id}`);
+      if (isEditMode && editId) {
+        await updateRoute(editId, { ...payload, version: routeVersion });
+        navigate(`/routes/${editId}`);
+      } else {
+        const res = await createRoute(payload);
+        navigate(`/routes/${res.data.id}`);
+      }
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Failed to save route");
+      if (err instanceof ApiError && err.code === "VERSION_CONFLICT") {
+        setSaveError("This route was modified elsewhere. Please refresh and try again.");
+      } else {
+        setSaveError(err instanceof Error ? err.message : "Failed to save route");
+      }
     } finally {
       setIsSaving(false);
     }
-  }, [name, description, activityType, waypoints, routeResult, navigate]);
+  }, [name, description, activityType, waypoints, routeResult, navigate, isEditMode, editId, routeVersion]);
 
   const canSave = name.trim().length > 0 && waypoints.length >= 2 && !isSaving;
+
+  if (isLoadingRoute) {
+    return (
+      <div className="flex h-[calc(100vh-64px)] items-center justify-center">
+        <p className="text-neutral-500">Loading route...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-[calc(100vh-64px)] flex-col items-center justify-center gap-4">
+        <p className="text-error">{loadError}</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="text-sm text-primary hover:underline"
+        >
+          Go back
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col lg:flex-row">
       {/* Sidebar */}
       <div className="flex w-full flex-col border-b border-neutral-200 bg-white lg:w-80 lg:border-b-0 lg:border-r">
         <div className="border-b border-neutral-200 p-4">
-          <h1 className="text-lg font-bold text-neutral-900">New Route</h1>
+          <h1 className="text-lg font-bold text-neutral-900">
+            {isEditMode ? "Edit Route" : "New Route"}
+          </h1>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
@@ -487,7 +599,11 @@ export function RouteBuilderPage() {
             disabled={!canSave}
             className="w-full rounded-button bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSaving ? "Saving..." : "Save Route"}
+            {isSaving
+              ? "Saving..."
+              : isEditMode
+                ? "Update Route"
+                : "Save Route"}
           </button>
         </div>
       </div>
