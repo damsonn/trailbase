@@ -114,7 +114,7 @@ describe("RoutesPage", () => {
       expect(screen.getByText("Harbour Bridge to Bondi")).toBeInTheDocument();
     });
     expect(screen.getByText("8.5 km")).toBeInTheDocument();
-    expect(screen.getByText("120 m gain")).toBeInTheDocument();
+    expect(screen.getByText("+120 m / -95 m")).toBeInTheDocument();
     expect(screen.getByText("1 route")).toBeInTheDocument();
     // Activity badge
     expect(screen.getAllByText("Bike").length).toBeGreaterThanOrEqual(1);

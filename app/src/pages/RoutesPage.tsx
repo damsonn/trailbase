@@ -347,7 +347,9 @@ export function RoutesPage() {
 
                     {/* Elevation */}
                     <span className="hidden w-24 text-right text-sm text-neutral-700 md:block">
-                      {formatElevation(route.elevationGainM)} gain
+                      {route.elevationGainM != null || route.elevationLossM != null
+                        ? `+${formatElevation(route.elevationGainM)} / -${formatElevation(route.elevationLossM)}`
+                        : "-"}
                     </span>
 
                     {/* Activity badge */}
