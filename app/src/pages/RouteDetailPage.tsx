@@ -8,22 +8,7 @@ import {
 } from "../lib/api.js";
 import { BaseMap, type MapViewState } from "../components/map/BaseMap.js";
 import { computeBoundsView } from "../lib/map-utils.js";
-
-const ACTIVITY_LABELS: Record<string, string> = {
-  bike: "Bike",
-  hike: "Hike",
-  car: "Car",
-};
-
-function formatDistance(m: number | null): string {
-  if (m == null) return "-";
-  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
-}
-
-function formatElevation(m: number | null): string {
-  if (m == null) return "-";
-  return `${Math.round(m)} m`;
-}
+import { ACTIVITY_LABELS, formatDistance, formatElevation } from "../lib/format.js";
 
 export { computeBoundsView };
 
