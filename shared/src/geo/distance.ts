@@ -30,17 +30,38 @@ export function totalDistance(coords: Coordinate[]): number {
   return total;
 }
 
-/** Calculate total elevation gain and loss from an array of elevations (meters). */
-export function elevationStats(elevations: number[]): {
+/**
+ * Calculate total elevation gain and loss from an array of elevations (meters).
+ *
+ * Uses a dead-band (threshold) filter to ignore GPS/DEM noise: elevation
+ * changes are only counted when the cumulative change from the last accepted
+ * reference point exceeds the threshold. This matches the approach used by
+ * Garmin, Strava, and RideWithGPS (typically 3–5 m).
+ */
+export function elevationStats(
+  elevations: number[],
+  /** Minimum elevation change (m) to count. Default 4 m. */
+  threshold = 4,
+): {
   gain: number;
   loss: number;
 } {
+  if (elevations.length < 2) return { gain: 0, loss: 0 };
+
   let gain = 0;
   let loss = 0;
+  let ref = elevations[0]!;
+
   for (let i = 1; i < elevations.length; i++) {
-    const diff = elevations[i]! - elevations[i - 1]!;
-    if (diff > 0) gain += diff;
-    else loss += Math.abs(diff);
+    const diff = elevations[i]! - ref;
+    if (diff > threshold) {
+      gain += diff;
+      ref = elevations[i]!;
+    } else if (diff < -threshold) {
+      loss += Math.abs(diff);
+      ref = elevations[i]!;
+    }
   }
+
   return { gain, loss };
 }

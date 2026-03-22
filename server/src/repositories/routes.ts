@@ -283,6 +283,29 @@ export class RouteRepository {
     return (Array.from(result) as unknown as RouteRow[])[0] ?? null;
   }
 
+  async updateElevation(
+    id: string,
+    userId: string,
+    gainM: number,
+    lossM: number,
+  ): Promise<RouteRow | null> {
+    const result = await this.db.execute(sql`
+      UPDATE routes
+      SET elevation_gain_m = ${gainM}, elevation_loss_m = ${lossM},
+          updated_at = NOW(), version = version + 1
+      WHERE id = ${id} AND user_id = ${userId} AND deleted_at IS NULL
+      RETURNING
+        id, user_id as "userId", name, description,
+        activity_type as "activityType",
+        ST_AsGeoJSON(geometry::geometry) as "geometryJson",
+        distance_m as "distanceM", elevation_gain_m as "elevationGainM",
+        elevation_loss_m as "elevationLossM", metadata, source_format as "sourceFormat",
+        deleted_at as "deletedAt", version, created_at as "createdAt", updated_at as "updatedAt"
+    `);
+    const rows = Array.from(result) as unknown as RouteRow[];
+    return rows[0] ?? null;
+  }
+
   async softDelete(id: string, userId: string): Promise<boolean> {
     const [row] = await this.db
       .update(routes)

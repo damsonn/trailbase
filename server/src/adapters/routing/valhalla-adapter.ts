@@ -116,16 +116,29 @@ export class ValhallaAdapter implements RoutingProvider {
 
 // ── Elevation calculation ─────────────────────────────────────────────────────
 
+/**
+ * Calculate elevation gain/loss from 3D coordinates using a dead-band filter.
+ * Ignores elevation changes smaller than `threshold` to filter GPS/DEM noise.
+ */
 export function calculateElevation(
   coords: number[][],
+  threshold = 4,
 ): { gain: number; loss: number } {
+  if (coords.length < 2) return { gain: 0, loss: 0 };
+
   let gain = 0;
   let loss = 0;
+  let ref = coords[0]![2]!;
 
   for (let i = 1; i < coords.length; i++) {
-    const delta = coords[i]![2]! - coords[i - 1]![2]!;
-    if (delta > 0) gain += delta;
-    else loss += Math.abs(delta);
+    const delta = coords[i]![2]! - ref;
+    if (delta > threshold) {
+      gain += delta;
+      ref = coords[i]![2]!;
+    } else if (delta < -threshold) {
+      loss += Math.abs(delta);
+      ref = coords[i]![2]!;
+    }
   }
 
   return { gain: Math.round(gain), loss: Math.round(loss) };

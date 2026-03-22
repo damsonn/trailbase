@@ -11,6 +11,7 @@ import {
   gpxToRouteInput,
   routeToGpx,
   serializeGpx,
+  elevationStats,
 } from "@trailbase/shared";
 import type { ApiErrorResponse } from "@trailbase/shared";
 
@@ -263,6 +264,59 @@ routeRoutes.post("/import", async (c) => {
   await repo.createWaypointsFromInput(route.id, importResult.waypoints);
 
   return c.json({ data: formatRoute(route) }, 201);
+});
+
+// ── POST /api/routes/:id/recalculate-elevation ──────────────────────────────
+
+routeRoutes.post("/:id/recalculate-elevation", async (c) => {
+  const user = c.get("user");
+  const id = c.req.param("id");
+
+  const route = await repo.findById(id, user.id);
+  if (!route) {
+    return c.json(
+      { error: { code: "ROUTE_NOT_FOUND", message: "Route not found" } },
+      404,
+    );
+  }
+
+  if (!route.geometryJson) {
+    return c.json(
+      validationError("Route has no geometry — cannot recalculate elevation"),
+      400,
+    );
+  }
+
+  const geometry = JSON.parse(route.geometryJson);
+  const coords: number[][] = geometry.coordinates;
+
+  // Extract Z (elevation) from 3D coordinates
+  const elevations = coords
+    .filter((c) => c.length >= 3)
+    .map((c) => c[2]!);
+
+  if (elevations.length < 2) {
+    return c.json(
+      validationError("Route geometry has no elevation data (Z coordinates)"),
+      400,
+    );
+  }
+
+  const stats = elevationStats(elevations);
+  const gainM = Math.round(stats.gain);
+  const lossM = Math.round(stats.loss);
+
+  const updated = await repo.updateElevation(id, user.id, gainM, lossM);
+
+  return c.json({
+    data: {
+      ...formatRoute(updated!),
+      _recalculated: {
+        elevationGainM: gainM,
+        elevationLossM: lossM,
+      },
+    },
+  });
 });
 
 // ── GET /api/routes/:id/export ──────────────────────────────────────────────

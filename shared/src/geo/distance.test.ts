@@ -30,10 +30,37 @@ describe("totalDistance", () => {
 });
 
 describe("elevationStats", () => {
-  it("calculates gain and loss", () => {
+  it("calculates gain and loss with default threshold", () => {
+    // Large changes exceed threshold (4m), so they are counted
     const elevations = [100, 200, 150, 300];
     const stats = elevationStats(elevations);
     expect(stats.gain).toBe(250); // +100 + +150
     expect(stats.loss).toBe(50); // -50
+  });
+
+  it("filters out noise below threshold", () => {
+    // Small fluctuations (±2m) should be ignored
+    const elevations = [100, 102, 100, 101, 99, 100];
+    const stats = elevationStats(elevations);
+    expect(stats.gain).toBe(0);
+    expect(stats.loss).toBe(0);
+  });
+
+  it("accumulates change only when threshold exceeded", () => {
+    // ref=100, 103 is +3 (below 4m threshold, ignored),
+    // then 105 is +5 from ref=100 (exceeds threshold → gain=5, ref=105)
+    const elevations = [100, 103, 105];
+    const stats = elevationStats(elevations);
+    expect(stats.gain).toBe(5);
+    expect(stats.loss).toBe(0);
+  });
+
+  it("respects custom threshold", () => {
+    const elevations = [100, 102, 100, 101, 99, 100];
+    // With threshold=0, every change counts (naive mode)
+    // Deltas: +2, -2, +1, -2, +1 → gain = 2+1+1 = 4, loss = 2+2 = 4
+    const stats = elevationStats(elevations, 0);
+    expect(stats.gain).toBe(4);
+    expect(stats.loss).toBe(4);
   });
 });
