@@ -656,7 +656,8 @@ export function RouteBuilderPage() {
         </div>
 
         {/* Elevation profile */}
-        {routeResult && routeResult.geometry.coordinates.length >= 2 && (
+        {routeResult && routeResult.geometry.coordinates.length >= 2 &&
+          routeResult.geometry.coordinates.some((c: number[]) => c[2] != null) && (
           <div className="h-36 border-t border-neutral-200 bg-white px-2 py-1">
             <ElevationProfile coordinates={routeResult.geometry.coordinates} />
           </div>

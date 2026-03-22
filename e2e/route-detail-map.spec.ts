@@ -29,9 +29,9 @@ test.describe("RouteDetailPage map", () => {
       await expect(page.getByRole("heading", { name: "Three Sisters Loop" })).toBeVisible();
       await waitForMap(page);
 
-      // 3 waypoints but waypoints 1 & 3 share coordinates → 2 marker elements
       const markers = page.locator(".maplibregl-marker");
-      await expect(markers).toHaveCount(2);
+      // 3 waypoints (1 & 3 share coords → 2 waypoint markers) + 2 start/end markers = 4
+      await expect(markers).toHaveCount(4);
       // Grouped marker shows "1/3", standalone shows "2"
       await expect(markers.filter({ hasText: "1/3" })).toHaveCount(1);
       await expect(markers.filter({ hasText: "2" })).toHaveCount(1);
@@ -47,7 +47,7 @@ test.describe("RouteDetailPage map", () => {
 
       const markers = page.locator(".maplibregl-marker");
       const count = await markers.count();
-      expect(count).toBe(2);
+      expect(count).toBe(4); // 2 waypoint + 2 start/end
 
       for (let i = 0; i < count; i++) {
         const markerBox = await markers.nth(i).boundingBox();
@@ -77,13 +77,14 @@ test.describe("RouteDetailPage map", () => {
   });
 
   test.describe("Harbour Bridge to Bondi", () => {
-    test("displays all 3 waypoint markers", async ({ page }) => {
+    test("displays all 3 waypoint markers plus start/end", async ({ page }) => {
       await page.goto(`/routes/${HARBOUR_BRIDGE_ID}`);
       await expect(page.getByRole("heading", { name: "Harbour Bridge to Bondi" })).toBeVisible();
       await waitForMap(page);
 
       const markers = page.locator(".maplibregl-marker");
-      await expect(markers).toHaveCount(3);
+      // 3 waypoint markers + 2 start/end markers = 5
+      await expect(markers).toHaveCount(5);
       await expect(markers.filter({ hasText: "1" })).toHaveCount(1);
       await expect(markers.filter({ hasText: "2" })).toHaveCount(1);
       await expect(markers.filter({ hasText: "3" })).toHaveCount(1);
@@ -99,7 +100,7 @@ test.describe("RouteDetailPage map", () => {
 
       const markers = page.locator(".maplibregl-marker");
       const count = await markers.count();
-      expect(count).toBe(3);
+      expect(count).toBe(5); // 3 waypoint + 2 start/end
 
       for (let i = 0; i < count; i++) {
         const markerBox = await markers.nth(i).boundingBox();

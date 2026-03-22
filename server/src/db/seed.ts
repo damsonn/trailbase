@@ -13,11 +13,26 @@ const sql = postgres(databaseUrl);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-function loadSeedGeometry(filename: string): { wkt: string; distanceM: number } {
+function loadSeedGeometry(filename: string): {
+  wkt: string;
+  distanceM: number;
+  elevationGainM: number;
+  elevationLossM: number;
+} {
   const data = JSON.parse(readFileSync(join(__dirname, filename), "utf-8"));
   const coords: number[][] = data.geometry.coordinates;
-  const wkt = `LINESTRING(${coords.map((c) => `${c[0]} ${c[1]}`).join(", ")})`;
-  return { wkt, distanceM: data.distanceM };
+  const has3D = coords.some((c) => c.length >= 3 && c[2] != null);
+
+  const wkt = has3D
+    ? `LINESTRINGZ(${coords.map((c) => `${c[0]} ${c[1]} ${c[2] ?? 0}`).join(", ")})`
+    : `LINESTRING(${coords.map((c) => `${c[0]} ${c[1]}`).join(", ")})`;
+
+  return {
+    wkt,
+    distanceM: data.distanceM,
+    elevationGainM: data.elevationGainM ?? 0,
+    elevationLossM: data.elevationLossM ?? 0,
+  };
 }
 
 async function seed() {
@@ -64,14 +79,16 @@ async function seed() {
       'bike',
       ST_GeogFromText(${harbourBridge.wkt}),
       ${harbourBridge.distanceM},
-      120,
-      95,
+      ${harbourBridge.elevationGainM},
+      ${harbourBridge.elevationLossM},
       'manual',
       '{"tags": ["coastal", "scenic"]}'::jsonb
     )
     ON CONFLICT (id) DO UPDATE SET
       geometry = ST_GeogFromText(${harbourBridge.wkt}),
-      distance_m = ${harbourBridge.distanceM}
+      distance_m = ${harbourBridge.distanceM},
+      elevation_gain_m = ${harbourBridge.elevationGainM},
+      elevation_loss_m = ${harbourBridge.elevationLossM}
   `;
 
   // Clean existing waypoints before re-seeding (waypoint IDs are auto-generated,
@@ -87,7 +104,7 @@ async function seed() {
   await sql`
     INSERT INTO waypoints (route_id, position, elevation_m, sort_order, name, type)
     VALUES
-      ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', ST_GeogFromText('POINT(151.2108 -33.8523)'), 5, 0, 'Harbour Bridge', 'stop'),
+      ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', ST_GeogFromText('POINT(151.2108 -33.8523)'), 7, 0, 'Harbour Bridge', 'stop'),
       ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', ST_GeogFromText('POINT(151.2231 -33.8688)'), 25, 1, 'Hyde Park', 'via'),
       ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', ST_GeogFromText('POINT(151.2741 -33.8915)'), 10, 2, 'Bondi Beach', 'stop')
   `;
@@ -104,14 +121,16 @@ async function seed() {
       'hike',
       ST_GeogFromText(${threeSisters.wkt}),
       ${threeSisters.distanceM},
-      280,
-      280,
+      ${threeSisters.elevationGainM},
+      ${threeSisters.elevationLossM},
       'manual',
       '{"tags": ["mountains", "loop", "views"]}'::jsonb
     )
     ON CONFLICT (id) DO UPDATE SET
       geometry = ST_GeogFromText(${threeSisters.wkt}),
-      distance_m = ${threeSisters.distanceM}
+      distance_m = ${threeSisters.distanceM},
+      elevation_gain_m = ${threeSisters.elevationGainM},
+      elevation_loss_m = ${threeSisters.elevationLossM}
   `;
 
   await sql`

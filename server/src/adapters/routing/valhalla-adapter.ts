@@ -76,7 +76,7 @@ export class ValhallaAdapter implements RoutingProvider {
     const legs = trip.legs;
 
     // Decode all leg shapes and merge into one geometry
-    const allCoords: [number, number, number?][] = [];
+    const allCoords: [number, number][] = [];
     const segments: RouteSegment[] = [];
 
     for (const leg of legs) {
@@ -98,18 +98,6 @@ export class ValhallaAdapter implements RoutingProvider {
       }
     }
 
-    // Calculate elevation stats from coordinates if elevation data present
-    const elevationGainM = 0;
-    const elevationLossM = 0;
-
-    // Valhalla summary provides elevation data
-    for (const leg of legs) {
-      if (leg.summary.max_elevation != null && leg.summary.min_elevation != null) {
-        // Use per-maneuver elevation data if available
-      }
-    }
-
-    // Fall back to summary stats
     const summary = trip.summary;
 
     return {
@@ -118,12 +106,29 @@ export class ValhallaAdapter implements RoutingProvider {
         coordinates: allCoords,
       },
       distanceM: summary.length * 1000,
-      elevationGainM,
-      elevationLossM,
+      elevationGainM: 0,
+      elevationLossM: 0,
       durationS: summary.time,
       segments,
     };
   }
+}
+
+// ── Elevation calculation ─────────────────────────────────────────────────────
+
+export function calculateElevation(
+  coords: number[][],
+): { gain: number; loss: number } {
+  let gain = 0;
+  let loss = 0;
+
+  for (let i = 1; i < coords.length; i++) {
+    const delta = coords[i]![2]! - coords[i - 1]![2]!;
+    if (delta > 0) gain += delta;
+    else loss += Math.abs(delta);
+  }
+
+  return { gain: Math.round(gain), loss: Math.round(loss) };
 }
 
 // ── Valhalla response types ─────────────────────────────────────────────────
@@ -151,7 +156,7 @@ interface ValhallaSummary {
 
 // ── Polyline decoder (precision 6 for Valhalla) ─────────────────────────────
 
-function decodePolyline6(encoded: string): [number, number][] {
+export function decodePolyline6(encoded: string): [number, number][] {
   const coords: [number, number][] = [];
   let index = 0;
   let lat = 0;

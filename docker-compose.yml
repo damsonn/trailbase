@@ -24,7 +24,7 @@ services:
     environment:
       tile_urls: https://download.geofabrik.de/australia-oceania/australia-latest.osm.pbf
       serve_tiles: "True"
-      build_elevation: "False"
+      build_elevation: "True"
       build_admins: "False"
       build_time_zones: "False"
 

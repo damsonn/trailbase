@@ -1,7 +1,9 @@
 import { Hono } from "hono";
 import { requireAuth } from "../middleware/auth.js";
 import { directionsRequestSchema } from "@trailbase/shared";
-import { ValhallaAdapter } from "../adapters/routing/valhalla-adapter.js";
+import { ValhallaAdapter, calculateElevation } from "../adapters/routing/valhalla-adapter.js";
+import { OpenMeteoAdapter } from "../adapters/elevation/index.js";
+import type { ElevationProvider } from "../adapters/elevation/index.js";
 import type { ApiErrorResponse } from "@trailbase/shared";
 
 type AuthEnv = {
@@ -16,6 +18,7 @@ const routingRoutes = new Hono<AuthEnv>();
 routingRoutes.use("*", requireAuth);
 
 const routingAdapter = new ValhallaAdapter();
+const elevationAdapter: ElevationProvider = new OpenMeteoAdapter();
 
 // ── POST /api/routing/directions ────────────────────────────────────────────
 
@@ -51,6 +54,27 @@ routingRoutes.post("/directions", async (c) => {
       profile,
       options,
     });
+
+    // Enrich coordinates with elevation data
+    const coords2D = routeResult.geometry.coordinates as [number, number][];
+    const elevations = await elevationAdapter.getElevations(coords2D);
+
+    const hasElevation = elevations.some((e) => e !== null && e !== 0);
+
+    if (hasElevation) {
+      // Merge elevation into coordinates as [lng, lat, elev]
+      routeResult.geometry.coordinates = coords2D.map(([lng, lat], i) => [
+        lng,
+        lat,
+        elevations[i] ?? 0,
+      ]);
+
+      const { gain, loss } = calculateElevation(
+        routeResult.geometry.coordinates,
+      );
+      routeResult.elevationGainM = gain;
+      routeResult.elevationLossM = loss;
+    }
 
     return c.json({ data: routeResult });
   } catch (err) {

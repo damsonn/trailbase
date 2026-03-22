@@ -59,6 +59,16 @@ const sortColumns = {
   distanceM: routes.distanceM,
 } as const;
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function buildLineStringWKT(coordinates: number[][]): string {
+  const has3D = coordinates.some((c) => c.length >= 3 && c[2] != null);
+  if (has3D) {
+    return `LINESTRINGZ(${coordinates.map((c) => `${c[0]} ${c[1]} ${c[2] ?? 0}`).join(", ")})`;
+  }
+  return `LINESTRING(${coordinates.map((c) => `${c[0]} ${c[1]}`).join(", ")})`;
+}
+
 // ── Repository ───────────────────────────────────────────────────────────────
 
 export class RouteRepository {
@@ -151,7 +161,7 @@ export class RouteRepository {
   ): Promise<RouteRow> {
     if (input.geometry) {
       // Use raw SQL for PostGIS geometry insertion
-      const wkt = `LINESTRING(${input.geometry.coordinates.map((c) => `${c[0]} ${c[1]}`).join(", ")})`;
+      const wkt = buildLineStringWKT(input.geometry.coordinates);
       const rows = await this.db.execute(sql`
         INSERT INTO routes (user_id, name, description, activity_type, geometry, distance_m, elevation_gain_m, elevation_loss_m, source_format)
         VALUES (
@@ -236,7 +246,7 @@ export class RouteRepository {
     // Update geometry separately via raw SQL if provided
     if (input.geometry !== undefined) {
       if (input.geometry) {
-        const wkt = `LINESTRING(${input.geometry.coordinates.map((c) => `${c[0]} ${c[1]}`).join(", ")})`;
+        const wkt = buildLineStringWKT(input.geometry.coordinates);
         await this.db.execute(sql`UPDATE routes SET geometry = ST_GeogFromText(${wkt}) WHERE id = ${id}`);
       } else {
         await this.db.execute(sql`UPDATE routes SET geometry = NULL WHERE id = ${id}`);

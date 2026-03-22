@@ -71,7 +71,8 @@ test.describe("RouteBuilder snap-to-road persistence", () => {
 
     // Verify the map source/route line is present
     const markers = page.locator(".maplibregl-marker");
-    await expect(markers).toHaveCount(2);
+    // 2 waypoint markers + 2 start/end markers = 4
+    await expect(markers).toHaveCount(4);
 
     // Clean up: delete the created route
     await page.getByRole("button", { name: "Delete" }).click();
@@ -120,7 +121,8 @@ test.describe("RouteBuilder snap-to-road persistence", () => {
 
     // Verify markers present
     const markers = page.locator(".maplibregl-marker");
-    await expect(markers).toHaveCount(2);
+    // 2 waypoint markers + 2 start/end markers = 4
+    await expect(markers).toHaveCount(4);
 
     // Clean up: delete the route
     await page.getByRole("button", { name: "Delete" }).click();
