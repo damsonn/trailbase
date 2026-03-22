@@ -13,18 +13,17 @@ export function computeBoundsView(
   const minLng = Math.min(...lngs);
   const maxLng = Math.max(...lngs);
 
-  // Add padding: at least 3x the span or a minimum of 0.01° so small
-  // routes don't end up zoomed in too far and clipping markers.
+  // Add small padding so markers aren't clipped at the edges.
   const rawLatSpan = maxLat - minLat;
   const rawLngSpan = maxLng - minLng;
-  const latSpan = Math.max(rawLatSpan * 3, 0.01);
-  const lngSpan = Math.max(rawLngSpan * 3, 0.01);
+  const latSpan = Math.max(rawLatSpan, 0.002);
+  const lngSpan = Math.max(rawLngSpan, 0.002);
 
   // Use the larger span to compute zoom. The formula maps degrees-per-tile
   // at zoom 0 (360° for lng, 180° for lat) to the span we need to show.
   const zoomLng = Math.log2(360 / lngSpan);
   const zoomLat = Math.log2(180 / latSpan);
-  const zoom = Math.max(1, Math.min(16, Math.floor(Math.min(zoomLng, zoomLat))));
+  const zoom = Math.max(1, Math.min(18, Math.min(zoomLng, zoomLat) + 1));
 
   return {
     latitude: (minLat + maxLat) / 2,

@@ -38,6 +38,12 @@ export function RouteDetailPage() {
 
   const initialMapView = useMemo<MapViewState | null>(() => {
     if (!route || route.waypoints.length === 0) return null;
+    // Prefer geometry coordinates for tighter fit (covers full route path)
+    if (route.geometry && route.geometry.coordinates.length >= 2) {
+      return computeBoundsView(
+        route.geometry.coordinates.map((c: number[]) => ({ lat: c[1]!, lng: c[0]! })),
+      );
+    }
     return computeBoundsView(
       route.waypoints.map((wp) => wp.position),
     );
@@ -158,7 +164,7 @@ export function RouteDetailPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="flex h-[calc(100vh-64px)] items-center justify-center">
         <p className="text-neutral-500">Loading route...</p>
       </div>
     );
@@ -166,7 +172,7 @@ export function RouteDetailPage() {
 
   if (error || !route) {
     return (
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="flex h-[calc(100vh-64px)] flex-col items-center justify-center">
         <p className="text-error">{error ?? "Route not found"}</p>
         <Link to="/routes" className="mt-4 inline-block text-sm text-primary hover:underline">
           Back to routes
@@ -176,30 +182,32 @@ export function RouteDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
-      {/* Breadcrumb */}
-      <nav className="mb-4 text-sm text-neutral-500">
-        <Link to="/routes" className="hover:text-primary">Routes</Link>
-        <span className="mx-2">/</span>
-        <span className="text-neutral-800">{route.name}</span>
-      </nav>
+    <div className="flex h-[calc(100vh-64px)]">
+      {/* Left sidebar */}
+      <div className="w-[380px] shrink-0 overflow-y-auto border-r border-neutral-200 bg-white p-6">
+        {/* Breadcrumb */}
+        <nav className="mb-4 text-sm text-neutral-500">
+          <Link to="/routes" className="hover:text-primary">Routes</Link>
+          <span className="mx-2">/</span>
+          <span className="text-neutral-800">{route.name}</span>
+        </nav>
 
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">{route.name}</h1>
-          {route.description && (
-            <p className="mt-2 text-neutral-500">{route.description}</p>
-          )}
-          <span className="mt-2 inline-block rounded-button bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-800">
+        {/* Title & metadata */}
+        <h1 className="text-xl font-bold text-neutral-900">{route.name}</h1>
+        <div className="mt-2 flex items-center gap-2">
+          <span className="rounded-button bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-800">
             {ACTIVITY_LABELS[route.activityType] ?? route.activityType}
           </span>
           {location && (
-            <p className="mt-1 text-sm text-neutral-500">Starts in: {location}</p>
+            <span className="text-sm text-neutral-500">{location}</span>
           )}
         </div>
+        {route.description && (
+          <p className="mt-2 text-sm text-neutral-500">{route.description}</p>
+        )}
 
-        <div className="flex gap-2">
+        {/* Action buttons */}
+        <div className="mt-4 flex gap-2">
           <button
             onClick={handleExport}
             className="rounded-button border border-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-100"
@@ -219,158 +227,149 @@ export function RouteDetailPage() {
             Delete
           </button>
         </div>
-      </div>
 
-      {/* Map */}
-      {initialMapView && route.waypoints.length > 0 && (
-        <div className="mb-8 h-[60vh] w-full overflow-hidden rounded-button border border-neutral-200">
-          <BaseMap
-            initialViewState={initialMapView}
-            cursor="grab"
-          >
-            {/* Start/end markers */}
-            {startEnd && (
-              <>
-                <Marker longitude={startEnd.start.lng} latitude={startEnd.start.lat} anchor="center">
-                  <div className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-green-500 shadow" />
-                </Marker>
-                <Marker longitude={startEnd.end.lng} latitude={startEnd.end.lat} anchor="center">
-                  <div className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-red-500 shadow" />
-                </Marker>
-              </>
-            )}
+        {/* Stats — compact grid */}
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-xs text-neutral-500">Distance</p>
+            <p className="text-base font-semibold">{formatDistance(route.distanceM)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-neutral-500">Elevation Gain</p>
+            <p className="text-base font-semibold">{formatElevation(route.elevationGainM)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-neutral-500">Elevation Loss</p>
+            <p className="text-base font-semibold">{formatElevation(route.elevationLossM)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-neutral-500">Est. Time</p>
+            <p className="text-base font-semibold">
+              {estimatedTime != null ? formatDuration(estimatedTime) : "-"}
+            </p>
+          </div>
+        </div>
 
-            {/* Waypoint markers — group overlapping positions */}
-            {(() => {
-              const groups = new Map<string, number[]>();
-              route.waypoints.forEach((wp, idx) => {
-                const key = `${wp.position.lat},${wp.position.lng}`;
-                const g = groups.get(key);
-                if (g) g.push(idx + 1);
-                else groups.set(key, [idx + 1]);
-              });
-              return Array.from(groups.entries()).map(([key, nums]) => {
-                const parts = key.split(",").map(Number);
-                const lat = parts[0]!;
-                const lng = parts[1]!;
-                return (
-                  <Marker
-                    key={key}
-                    longitude={lng}
-                    latitude={lat}
-                    anchor="center"
-                  >
-                    <div className="flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-primary px-1 text-xs font-bold text-white shadow">
-                      {nums.length === 1 ? nums[0] : `${nums[0]}/${nums[nums.length - 1]}`}
-                    </div>
-                  </Marker>
-                );
-              });
-            })()}
-
-            {/* Route line */}
-            {routeGeoJSON && (
-              <Source id="route-line" type="geojson" data={routeGeoJSON}>
-                <Layer
-                  id="route-line-layer"
-                  type="line"
-                  paint={{
-                    "line-color": "#2563eb",
-                    "line-width": 3,
-                    "line-opacity": 0.8,
-                  }}
-                />
-                <Layer
-                  id="route-arrows-layer"
-                  type="symbol"
-                  layout={{
-                    "symbol-placement": "line",
-                    "symbol-spacing": 100,
-                    "text-field": "\u25B6",
-                    "text-size": 12,
-                    "text-rotation-alignment": "map",
-                    "text-allow-overlap": true,
-                    "text-ignore-placement": true,
-                  }}
-                  paint={{
-                    "text-color": "#2563eb",
-                    "text-opacity": 0.7,
-                  }}
-                />
-              </Source>
-            )}
-          </BaseMap>
-        </div>
-      )}
-
-      {/* Stats */}
-      <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <div className="rounded-button border border-neutral-200 bg-white p-4">
-          <p className="text-xs text-neutral-500">Distance</p>
-          <p className="mt-1 text-lg font-semibold">{formatDistance(route.distanceM)}</p>
-        </div>
-        <div className="rounded-button border border-neutral-200 bg-white p-4">
-          <p className="text-xs text-neutral-500">Elevation Gain</p>
-          <p className="mt-1 text-lg font-semibold">{formatElevation(route.elevationGainM)}</p>
-        </div>
-        <div className="rounded-button border border-neutral-200 bg-white p-4">
-          <p className="text-xs text-neutral-500">Elevation Loss</p>
-          <p className="mt-1 text-lg font-semibold">{formatElevation(route.elevationLossM)}</p>
-        </div>
-        <div className="rounded-button border border-neutral-200 bg-white p-4">
-          <p className="text-xs text-neutral-500">Est. Time</p>
-          <p className="mt-1 text-lg font-semibold">
-            {estimatedTime != null ? formatDuration(estimatedTime) : "-"}
-          </p>
-        </div>
-      </div>
-
-      {/* Elevation Profile */}
-      {route.geometry &&
-        route.geometry.coordinates.length >= 2 &&
-        route.geometry.coordinates.some((c: number[]) => c[2] != null) && (
-          <div className="mb-8">
-            <h2 className="mb-3 text-lg font-semibold text-neutral-900">
-              Elevation Profile
+        {/* Waypoints */}
+        {route.waypoints.length > 0 && (
+          <div className="mt-6">
+            <h2 className="mb-2 text-sm font-semibold text-neutral-900">
+              Waypoints ({route.waypoints.length})
             </h2>
-            <div className="h-48 rounded-button border border-neutral-200 bg-white p-4">
-              <ElevationProfile coordinates={route.geometry.coordinates} />
+            <div className="space-y-1.5">
+              {route.waypoints.map((wp, i) => (
+                <div
+                  key={wp.id}
+                  className="flex items-center gap-3 rounded-button border border-neutral-200 bg-white px-3 py-2 text-sm"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="font-medium">{wp.name ?? `Waypoint ${i + 1}`}</span>
+                  </div>
+                  {wp.elevationM != null && (
+                    <span className="text-xs text-neutral-500">{Math.round(wp.elevationM)} m</span>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}
+      </div>
 
-      {/* Waypoints */}
-      {route.waypoints.length > 0 && (
-        <div>
-          <h2 className="mb-3 text-lg font-semibold text-neutral-900">
-            Waypoints ({route.waypoints.length})
-          </h2>
-          <div className="space-y-2">
-            {route.waypoints.map((wp, i) => (
-              <div
-                key={wp.id}
-                className="flex items-center gap-4 rounded-button border border-neutral-200 bg-white px-4 py-3 text-sm"
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                  {i + 1}
-                </span>
-                <div className="flex-1">
-                  <span className="font-medium">{wp.name ?? `Waypoint ${i + 1}`}</span>
-                  <span className="ml-3 text-neutral-500">
-                    {wp.position.lat.toFixed(4)}, {wp.position.lng.toFixed(4)}
-                  </span>
-                </div>
-                {wp.elevationM != null && (
-                  <span className="text-neutral-500">{Math.round(wp.elevationM)} m</span>
-                )}
-                <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-500">
-                  {wp.type}
-                </span>
-              </div>
-            ))}
+      {/* Right: Map + elevation profile */}
+      <div className="flex flex-1 flex-col">
+        {initialMapView && route.waypoints.length > 0 && (
+          <div className="flex-1">
+            <BaseMap
+              initialViewState={initialMapView}
+              cursor="grab"
+            >
+              {/* Start/end markers */}
+              {startEnd && (
+                <>
+                  <Marker longitude={startEnd.start.lng} latitude={startEnd.start.lat} anchor="center">
+                    <div className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-green-500 shadow" />
+                  </Marker>
+                  <Marker longitude={startEnd.end.lng} latitude={startEnd.end.lat} anchor="center">
+                    <div className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-red-500 shadow" />
+                  </Marker>
+                </>
+              )}
+
+              {/* Waypoint markers — group overlapping positions */}
+              {(() => {
+                const groups = new Map<string, number[]>();
+                route.waypoints.forEach((wp, idx) => {
+                  const key = `${wp.position.lat},${wp.position.lng}`;
+                  const g = groups.get(key);
+                  if (g) g.push(idx + 1);
+                  else groups.set(key, [idx + 1]);
+                });
+                return Array.from(groups.entries()).map(([key, nums]) => {
+                  const parts = key.split(",").map(Number);
+                  const lat = parts[0]!;
+                  const lng = parts[1]!;
+                  return (
+                    <Marker
+                      key={key}
+                      longitude={lng}
+                      latitude={lat}
+                      anchor="center"
+                    >
+                      <div className="flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-primary px-1 text-xs font-bold text-white shadow">
+                        {nums.length === 1 ? nums[0] : `${nums[0]}/${nums[nums.length - 1]}`}
+                      </div>
+                    </Marker>
+                  );
+                });
+              })()}
+
+              {/* Route line */}
+              {routeGeoJSON && (
+                <Source id="route-line" type="geojson" data={routeGeoJSON}>
+                  <Layer
+                    id="route-line-layer"
+                    type="line"
+                    paint={{
+                      "line-color": "#2563eb",
+                      "line-width": 3,
+                      "line-opacity": 0.8,
+                    }}
+                  />
+                  <Layer
+                    id="route-arrows-layer"
+                    type="symbol"
+                    layout={{
+                      "symbol-placement": "line",
+                      "symbol-spacing": 100,
+                      "text-field": "\u25B6",
+                      "text-size": 12,
+                      "text-rotation-alignment": "map",
+                      "text-allow-overlap": true,
+                      "text-ignore-placement": true,
+                    }}
+                    paint={{
+                      "text-color": "#2563eb",
+                      "text-opacity": 0.7,
+                    }}
+                  />
+                </Source>
+              )}
+            </BaseMap>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Elevation Profile — below map */}
+        {route.geometry &&
+          route.geometry.coordinates.length >= 2 &&
+          route.geometry.coordinates.some((c: number[]) => c[2] != null) && (
+            <div className="h-36 border-t border-neutral-200 bg-white px-2 py-1">
+              <ElevationProfile coordinates={route.geometry.coordinates} />
+            </div>
+          )}
+      </div>
 
       {/* Delete confirmation dialog */}
       {showDeleteConfirm && (

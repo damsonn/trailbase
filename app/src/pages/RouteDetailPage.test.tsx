@@ -288,9 +288,8 @@ describe("RouteDetailPage", () => {
     mockFetchRoute.mockResolvedValue({ data: MOCK_ROUTE });
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/Starts in:/)).toBeInTheDocument();
+      expect(screen.getByText("Sydney, New South Wales")).toBeInTheDocument();
     });
-    expect(screen.getByText("Starts in: Sydney, New South Wales")).toBeInTheDocument();
   });
 
   it("hides location when geocoding fails", async () => {
@@ -300,7 +299,7 @@ describe("RouteDetailPage", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Test Route" })).toBeInTheDocument();
     });
-    expect(screen.queryByText(/Starts in:/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Sydney, New South Wales")).not.toBeInTheDocument();
   });
 
   it("renders elevation profile when geometry has elevation data", async () => {
@@ -319,9 +318,8 @@ describe("RouteDetailPage", () => {
     mockFetchRoute.mockResolvedValue({ data: routeWithElevation });
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText("Elevation Profile")).toBeInTheDocument();
+      expect(screen.getByTestId("elevation-profile")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("elevation-profile")).toBeInTheDocument();
   });
 
   it("hides elevation profile when geometry has no elevation", async () => {
@@ -340,7 +338,7 @@ describe("RouteDetailPage", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Test Route" })).toBeInTheDocument();
     });
-    expect(screen.queryByText("Elevation Profile")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("elevation-profile")).not.toBeInTheDocument();
   });
 });
 
